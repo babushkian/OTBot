@@ -1,0 +1,12 @@
+/.venv
+/misc
+.env
+.idea
+/venv
+__pycache__
+tst_in_otbot.py
+/temp
+statistics.txt
+*.db
+logs
+static
