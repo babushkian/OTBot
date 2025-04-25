@@ -6,8 +6,6 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from logger_config import log
-
 
 class DbSessionMiddleware(BaseMiddleware):
     """Middleware получения соединения с БД."""
@@ -24,7 +22,6 @@ class DbSessionMiddleware(BaseMiddleware):
             data: dict[str, Any],
     ) -> tuple:
         """Получение соединения с БД и добавление её в контекст."""
-        log.info("Session created for.")
         async with self.session_pool() as session:
             data["session"] = session
             return await handler(event, data)
