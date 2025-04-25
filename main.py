@@ -8,8 +8,8 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
 
 from bot.config import settings, set_bot_commands
-from logger_config import log
 from bot.handlers import router as main_router
+from logger_config import log
 
 
 async def on_startup(bot: Bot) -> None:  # функция выполняется при запуске бота
