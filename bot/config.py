@@ -24,13 +24,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BASE_DIR / Path(".env"), case_sensitive=False)
 
 
-settings = Settings()
-BASEDIR = settings.BASE_DIR
-
-
 async def set_bot_commands(bot: Bot) -> None:
     """Установка команд в меню клиента приложения телеграм."""
     commands = [
         BotCommand(command="/help", description="Инструкция по использованию"),
     ]
     await bot.set_my_commands(commands)
+
+
+settings = Settings()
+BASEDIR = settings.BASE_DIR
+TG_GROUP_ID = -4213770859

@@ -4,10 +4,12 @@ from collections.abc import Callable, Awaitable
 
 from aiogram import BaseMiddleware, types
 from aiogram.types import TelegramObject
+from aiogram.exceptions import TelegramBadRequest
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.config import TG_GROUP_ID
 from logger_config import log
 from bot.bot_exceptions import EmptyDatabaseSessionError
 from bot.repositories.user_repo import UserRepository
@@ -43,4 +45,19 @@ class UserCheckMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         data["user"] = user
+        # проверка на участие в группе
+        try:
+            if await event.bot.get_chat_member(TG_GROUP_ID, event.from_user.id):
+                data["group_user"] = user
+        except TelegramBadRequest:
+            data["group_user"] = False
+            log.warning(f"ILLEGAL attempt to access ueser not been in group {TG_GROUP_ID} "
+                        f"id: {event.from_user.id}, "
+                        f"tg_name: {event.from_user.full_name}.")
+
+        if not all((data["user"], data["group_user"])):
+            data["access_denied"] = True
+        else:
+            data["access_denied"] = False
+
         return await handler(event, data)
