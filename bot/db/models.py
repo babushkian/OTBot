@@ -15,6 +15,7 @@ class UserModel(Base):
     telegram_id: Mapped[int] = mapped_column(BIGINT, unique=True)
     first_name: Mapped[str | None]
     last_name: Mapped[str | None]
+    phone_number: Mapped[str | None]
 
     user_role: Mapped[UserRole] = mapped_column(default=UserRole.USER)
     is_approved: Mapped[bool] = mapped_column(default=False, server_default=false())  # одобрен

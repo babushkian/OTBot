@@ -1,43 +1,46 @@
 """Middleware пользователя."""
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from collections.abc import Callable, Awaitable
 
 from aiogram import BaseMiddleware, types
 from aiogram.types import TelegramObject
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 from logger_config import log
+from bot.bot_exceptions import EmptyDatabaseSessionError
+from bot.repositories.user_repo import UserRepository
 
 
-# from utils.handlers_utils import user_auth
-
-
-class AuthMiddleware(BaseMiddleware):
-    """Проверка и аутентификация пользователя отправляющего сообщения."""
+class UserCheckMiddleware(BaseMiddleware):
+    """Middleware проверки пользователя."""
 
     async def __call__(self,
                        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
                        event: types,
-                       data: dict[str, Any]) -> Any:  # noqa ANN401
-        """Вызов middleware."""
-        if event.message:
-            # разрешённые команды
-            allowed_messages = ("/start", "/register", "/help")
-            message: types.Message = event.message
-            if message.text in allowed_messages:
-                log.debug("Допустимое сообщение {message} от пользователя {user_id}.",
-                          message=message.text,
-                          user_id=message.from_user.id)
-                return await handler(event, data)
+                       data: dict[str, Any]) -> tuple:
+        """Запускает проверку пользователя."""
+        session: AsyncSession = data.get("session")
 
-            # user = await user_auth(message)
+        if not session:
+            msg = "Session not found in middleware data"
+            raise EmptyDatabaseSessionError(msg)
 
-            # if user is False:
-            #     return None
-            # data["user"] = user
-            # data["bot"] = event.bot
-            # log.debug("Сообщение зарегистрированного пользователя {user_id}.",
-            #           user_id=user.telegram_id)
+        user_repo = UserRepository(session)
+        user = await user_repo.get_user_by_telegram_id(event.from_user.id)
 
+        if not user:
+            command = event.text.split()[0] if event.text else "media_send"
+            if command in ["/start", "/help", "media_send", "❌ Отмена"]:
+                log.debug("Unauthorized user {user} used allowed command {command}",
+                          user=event.from_user.id, command=command)
+            else:
+                log.warning("Attempt to access unauthorized user with id {user} by command {command}",
+                            user=event.from_user.id, command=command)
+
+            data["user"] = False
             return await handler(event, data)
 
-        return None
+        data["user"] = user
+        return await handler(event, data)
