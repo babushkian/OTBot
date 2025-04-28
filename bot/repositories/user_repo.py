@@ -1,11 +1,13 @@
 """Репозитории приложения."""
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole
 from bot.db.models import UserModel
+from logger_config import log
 
 
 class UserRepository:
@@ -31,7 +33,35 @@ class UserRepository:
         users = await self.session.execute(select(UserModel).where(UserModel.user_role == role))
         return [user.to_dict() for user in users.scalars().all()]
 
-    async def get_users_not_approved_users(self) -> list[dict[str, Any]]:
+    async def get_not_approved_users(self) -> list[dict[str, Any]]:
         """Получение всех не одобренных пользователей."""
-        result = await self.session.execute(select(UserModel).where(UserModel.is_approved is False))
+        result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(0)))
         return [user.to_dict() for user in result.scalars().all()]
+
+    async def get_approved_users(self) -> list[dict[str, Any]]:
+        """Получение всех не одобренных пользователей."""
+        result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(1)))
+        return [user.to_dict() for user in result.scalars().all()]
+
+    async def update_user_by_id(self, user_id: int, update_data: dict[str, Any]) -> None:
+        """Обновление данных пользователя по его user_id."""
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(**update_data)
+        )
+        try:
+            await self.session.execute(stmt)
+            await self.session.commit()
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            log.error("Ошибка при обновлении пользователя с ID {user_id}", user_id=user_id)
+            log.exception(e)
+            return
+        except Exception as e:
+            log.error("Непредвиденная ошибка при обновлении пользователя с id {user_id}", user_id=user_id)
+            log.exception(e)
+            return
+        else:
+            log.success("Данные пользователя с id {user_id} успешно обновлены: {update_data}",
+                        user_id=user_id, update_data=update_data)

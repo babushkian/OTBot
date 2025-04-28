@@ -35,3 +35,4 @@ async def set_bot_commands(bot: Bot) -> None:
 settings = Settings()
 BASEDIR = settings.BASE_DIR
 TG_GROUP_ID = -4213770859
+SUPER_USERS_TG_ID = (1238658905, )

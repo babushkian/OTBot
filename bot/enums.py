@@ -5,10 +5,10 @@ from enum import StrEnum
 class UserRole(StrEnum):
     """Роли пользователей."""
 
-    ADMIN = "admin"
-    USER = "user"
-    OTPB = "otpb"
-    RESPONSIBLE = "responsible"
+    OTPB = "РаботникОТПБ"
+    RESPONSIBLE = "Ответственный"
+    ADMIN = "Администратор"
+    USER = "Наблюдатель"
 
 
 class ViolationCategory(StrEnum):
