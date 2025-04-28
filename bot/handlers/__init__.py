@@ -17,8 +17,8 @@ common_handlers_router.message.middleware.register(DbSessionMiddleware(session_p
 common_handlers_router.message.middleware.register(UserCheckMiddleware())
 
 approve_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
+approve_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
 approve_handlers_router.message.middleware.register(UserCheckMiddleware())
-
 
 router.include_routers(
     main_base_commands_router,

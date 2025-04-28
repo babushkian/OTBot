@@ -17,7 +17,7 @@ class UserModel(Base):
     last_name: Mapped[str | None]
     phone_number: Mapped[str | None]
 
-    user_role: Mapped[UserRole] = mapped_column(default=UserRole.USER)
+    user_role: Mapped[UserRole] = mapped_column(default=UserRole.USER.name)
     is_approved: Mapped[bool] = mapped_column(default=False, server_default=false())  # одобрен
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())  # активен
     telegram_data: Mapped[dict | None] = mapped_column(JSON)  # данные из telegram
