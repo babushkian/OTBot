@@ -1,6 +1,5 @@
 """Модели OTBot."""
 
-
 from sqlalchemy import TEXT, BIGINT, String, ForeignKey, LargeBinary, true, false
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from sqlalchemy.dialects.sqlite import JSON
@@ -44,7 +43,7 @@ class ViolationModel(Base):
     description: Mapped[str] = mapped_column(String(200))
     status: Mapped[ViolationStatus] = mapped_column(default=ViolationStatus.ACTIVE)
     category: Mapped[ViolationCategory]
-    actions_needed: Mapped[str] = mapped_column(TEXT)
+    actions_needed: Mapped[str] = mapped_column(TEXT)  # Мероприятия по устранению нарушения
 
     def __str__(self) -> str:
         """Строковое представление."""
@@ -54,13 +53,18 @@ class ViolationModel(Base):
 class AreaModel(Base):
     """Модель места нарушения."""
 
-    name: Mapped[str] = mapped_column(unique=True)
-    description: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True, info={"verbose_name": "Имя места"})
+    description: Mapped[str | None] = mapped_column(info={"verbose_name": "Описание места"})
     violations: Mapped[list["ViolationModel"]] = relationship("ViolationModel", back_populates="area")
 
-    responsible_user_id: Mapped[int] = mapped_column(ForeignKey("usermodel.id",
-                                                                name="fk_area_responsible_user_id"))
+    responsible_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usermodel.id", name="fk_area_responsible_user_id"),
+        info={"verbose_name": "Ответственный из зарегистрированных"})
     responsible_user: Mapped["UserModel"] = relationship("UserModel", back_populates="responsible_area")
+    # Поле для ручного ввода ФИО ответственного
+    responsible_text: Mapped[str | None] = mapped_column(
+        String(250),
+        info={"verbose_name": "Ответственный введённый вручную"})
 
     def __str__(self) -> str:
         """Строковое представление."""

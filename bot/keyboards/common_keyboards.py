@@ -25,7 +25,7 @@ def generate_yes_no_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def generate_inline_cancel_button() -> ReplyKeyboardMarkup:
+def generate_cancel_button() -> ReplyKeyboardMarkup:
     """Генерирует клавиатуру с кнопками "Поделиться контактом" и "Отмена"."""
     cancel_button = KeyboardButton(text="❌ Отмена")
 
