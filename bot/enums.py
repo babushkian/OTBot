@@ -22,5 +22,7 @@ class ViolationCategory(StrEnum):
 class ViolationStatus(StrEnum):
     """Статусы нарушений."""
 
+    REVIEW = "проверяется"
     ACTIVE = "активно"
     CORRECTED = "устранено"
+    REJECTED = "отклонено"

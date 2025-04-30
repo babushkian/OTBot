@@ -19,8 +19,3 @@ def verify_string_as_filename(input_string: str) -> str:
         raise StringInputError(max_length=max_length)
 
     return input_string
-
-
-# def dict_to_flat_string(data: dict, separator: str = " ", key_value_separator: str = "=") -> str:
-#     """Преобразует словарь в плоскую строку формата key1=value1&key2=value2."""
-#     return separator.join(f"{key}{key_value_separator}{value}" for key, value in data.items())

@@ -5,22 +5,25 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import TG_GROUP_ID, SUPER_USERS_TG_ID
-from bot.db.models import UserModel
 from bot.repositories.user_repo import UserRepository
 from bot.handlers.approve_handlers.states import ApproveUserStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
-from bot.keyboards.inline_keyboards.callback_factories import ApproveUserFactory, DisApproveUserFactory
+from bot.keyboards.inline_keyboards.callback_factories import (
+    ApproveUserFactory,
+    DeletedUserFactory,
+    DisApproveUserFactory,
+)
 
 router = Router(name=__name__)
 
 
+# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("approve"))
-async def approve_command(message: types.Message, access_denied: bool,
-                          group_user: UserModel | None,
+async def approve_command(message: types.Message,
                           session: AsyncSession,
                           state: FSMContext) -> None:
     """Одобрение пользователя администратором."""
-    if access_denied and group_user.telegram_id not in SUPER_USERS_TG_ID:
+    if message.from_user.id not in SUPER_USERS_TG_ID:
         return
 
     user_repo = UserRepository(session)
@@ -40,12 +43,11 @@ async def approve_command(message: types.Message, access_denied: bool,
     await state.set_state(ApproveUserStates.started)
 
 
+# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("disapprove"))
-async def disapprove_command(message: types.Message, access_denied: bool,
-                             group_user: UserModel | None,
-                             session: AsyncSession) -> None:
+async def disapprove_command(message: types.Message, session: AsyncSession) -> None:
     """Одобрение пользователя администратором."""
-    if access_denied and group_user.telegram_id not in SUPER_USERS_TG_ID:
+    if message.from_user.id not in SUPER_USERS_TG_ID:
         return
 
     user_repo = UserRepository(session)
@@ -63,3 +65,26 @@ async def disapprove_command(message: types.Message, access_denied: bool,
 
     await message.reply("Выберите пользователя для отмены одобрения:", reply_markup=users_to_approve_kb)
 
+
+# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
+@router.message(Command("delapprove"))
+async def delete_command(message: types.Message, session: AsyncSession) -> None:
+    """Одобрение пользователя администратором."""
+    if message.from_user.id not in SUPER_USERS_TG_ID:
+        return
+
+    user_repo = UserRepository(session)
+    users = await user_repo.get_not_approved_users()
+    users_to_delete = tuple([{"id": line["id"], "phone_number": f"{line["first_name"]} {line["phone_number"]}"}
+                             for line in users
+                             if await message.bot.get_chat_member(TG_GROUP_ID, line["telegram_id"])])
+    if not users_to_delete:
+        await message.reply("Нет пользователей для удаления. Перед удалением пользователя, "
+                            "его регистрация должна быть отменена.")
+        return
+
+    users_to_delete_kb = await create_keyboard(
+        items=users_to_delete, text_key="phone_number", callback_factory=DeletedUserFactory,
+    )
+
+    await message.reply("Выберите для отмены удаления:", reply_markup=users_to_delete_kb)
