@@ -9,9 +9,10 @@ from aiogram.exceptions import TelegramBadRequest
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.config import TG_GROUP_ID
+from bot.constants import TG_GROUP_ID
 from logger_config import log
 from bot.bot_exceptions import EmptyDatabaseSessionError
+from bot.set_bot_commands import set_bot_commands
 from bot.repositories.user_repo import UserRepository
 
 
@@ -59,5 +60,7 @@ class UserCheckMiddleware(BaseMiddleware):
             data["access_denied"] = True
         else:
             data["access_denied"] = False
+
+        await set_bot_commands(event.bot, user)
 
         return await handler(event, data)

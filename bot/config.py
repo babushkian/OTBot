@@ -2,8 +2,6 @@
 from typing import ClassVar
 from pathlib import Path
 
-from aiogram import Bot
-from aiogram.types import BotCommand
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,15 +22,27 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BASE_DIR / Path(".env"), case_sensitive=False)
 
 
-async def set_bot_commands(bot: Bot) -> None:
-    """Установка команд в меню клиента приложения телеграм."""
-    commands = [
-        BotCommand(command="/help", description="Инструкция по использованию"),
-    ]
-    await bot.set_my_commands(commands)
+# global_commands = ({"command": "start", "description": "Начать работу"},
+#                    {"command": "help", "description": "Помощь"})
+
+# Глобальные команды (для всех пользователей)
+# GLOBAL_COMMANDS = [
+#     BotCommand(command="start", description="Начать работу"),
+#     BotCommand(command="help", description="Помощь"),
+# ]
+#
+# # Команды для администраторов
+# ADMIN_COMMANDS = [
+#                      BotCommand(command="admin", description="Админ-панель"),
+#                      BotCommand(command="stats", description="Статистика"),
+#                  ] + GLOBAL_COMMANDS
+
+# Команды для обычных пользователей
+# USER_COMMANDS = GLOBAL_COMMANDS
 
 
 settings = Settings()
 BASEDIR = settings.BASE_DIR
-TG_GROUP_ID = -4213770859
-SUPER_USERS_TG_ID = (1238658905, )
+
+# if __name__ == "__main__":
+#     set_bot_commands()

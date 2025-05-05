@@ -26,7 +26,7 @@ class AreaRepository:
             log.exception(e)
             return None
         except Exception as e:
-            log.error("Error getting user with id {user_id} с id {area_id}", area_id=area_id)
+            log.error("Error getting area with idd {area_id}", area_id=area_id)
             log.exception(e)
             return None
         else:
@@ -93,7 +93,7 @@ class AreaRepository:
                         area=area_id, update_data=update_data)
 
     async def delete_area_by_id(self, area_id: int) -> None:
-        """Обновление данных пользователя по его user_id."""
+        """Удаление данных места нарушения по area_id."""
         stmt = (
             delete(AreaModel)
             .where(AreaModel.id == area_id)
@@ -103,12 +103,12 @@ class AreaRepository:
             await self.session.commit()
         except SQLAlchemyError as e:
             await self.session.rollback()
-            log.error("SQLAlchemyError deleting area with id {area}", area_id=area_id)
+            log.error("SQLAlchemyError deleting area with id {area}", area=area_id)
             log.exception(e)
             return
         except Exception as e:
-            log.error("Error deleting area with id {area}", area_id=area_id)
+            log.error("Error deleting area with id {area}", area=area_id)
             log.exception(e)
             return
         else:
-            log.success("Area with id {area} deleted successfully", area_id=area_id)
+            log.success("Area with id {area} deleted successfully", area=area_id)

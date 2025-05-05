@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
 
-from bot.config import settings, set_bot_commands
+from bot.config import settings
 from bot.handlers import router as main_router
 from logger_config import log
 
@@ -35,8 +35,6 @@ async def main() -> None:
         dp.startup.register(on_startup)
         dp.shutdown.register(on_shutdown)
         await bot.delete_webhook(drop_pending_updates=True)
-        await set_bot_commands(bot)  # установка команд
-        # dp.update.middleware(AuthMiddleware())  # добавление middleware
         await dp.start_polling(bot)
     except (KeyboardInterrupt, CancelledError):
         log.debug("Бот остановлен принудительной командой.")

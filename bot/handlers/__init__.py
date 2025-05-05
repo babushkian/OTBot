@@ -34,6 +34,7 @@ area_handlers_router.message.middleware.register(UserCheckMiddleware())
 detection_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
 detection_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
 detection_handlers_router.message.middleware.register(UserCheckMiddleware())
+detection_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
 
 router.include_routers(
     main_base_commands_router,

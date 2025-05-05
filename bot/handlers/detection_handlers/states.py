@@ -8,8 +8,16 @@ class DetectionStates(StatesGroup):
     start = State()
     send_photo = State()
     enter_area = State()
-    enter_description = State()
     select_category = State()
     select_actions_needed = State()
-    complete = State()
+    completed = State()
 
+
+class ViolationStates(StatesGroup):
+    """Состояния нарушений."""
+
+    start = State()
+    review = State()
+
+    activate = State()
+    delete = State()

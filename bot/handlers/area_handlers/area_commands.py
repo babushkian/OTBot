@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole
-from bot.config import SUPER_USERS_TG_ID
+from bot.constants import SUPER_USERS_TG_ID
 from bot.db.models import UserModel
 from logger_config import log
 from bot.repositories.area_repo import AreaRepository
