@@ -53,3 +53,29 @@ class AreaFieldToUpdateFactory(CallbackData, prefix="arfield"):
 
     id: int
     field_name: str
+
+
+class ViolationCategoryFactory(CallbackData, prefix="viocat"):
+    """Фабрика для создания callback_data каатегории нарушения."""
+
+    category: str
+
+
+class MultiSelectCallbackFactory(CallbackData, prefix="mulsel"):
+    """Фабрика для callback_data с возможностью множественного выбора."""
+
+    id: int | None = None
+    selected: bool = False
+    action: str
+
+
+class ViolationsFactory(CallbackData, prefix="viols"):
+    """Фабрика для callback_data для выбора нарушений."""
+
+    id: int
+
+
+class ViolationsActionFactory(CallbackData, prefix="vioact"):
+    """Фабрика для callback_data для выбора действия с нарушением."""
+
+    action: str

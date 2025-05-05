@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.config import TG_GROUP_ID, SUPER_USERS_TG_ID
+from bot.constants import TG_GROUP_ID, SUPER_USERS_TG_ID
 from bot.repositories.user_repo import UserRepository
 from bot.handlers.approve_handlers.states import ApproveUserStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard

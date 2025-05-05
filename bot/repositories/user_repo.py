@@ -147,7 +147,7 @@ class UserRepository:
                         user_id=user_id, update_data=update_data)
 
     async def delete_user_by_id(self, user_id: int) -> None:
-        """Обновление данных пользователя по его user_id."""
+        """Удаление данных пользователя по его user_id."""
         stmt = (
             delete(UserModel)
             .where(UserModel.id == user_id)

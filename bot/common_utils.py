@@ -19,3 +19,5 @@ def verify_string_as_filename(input_string: str) -> str:
         raise StringInputError(max_length=max_length)
 
     return input_string
+
+
