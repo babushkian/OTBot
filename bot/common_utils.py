@@ -21,3 +21,11 @@ def verify_string_as_filename(input_string: str) -> str:
     return input_string
 
 
+def verify_string_as_integer(input_string: str) -> tuple[bool, str | None]:
+    """Проверяет строку на возможность использования её в качестве целого числа."""
+    try:
+        int(input_string)
+    except ValueError:
+        return False, "Введите целое число."
+    else:
+        return True, None

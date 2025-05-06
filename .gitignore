@@ -10,3 +10,4 @@ statistics.txt
 *.db
 logs
 static
+violations

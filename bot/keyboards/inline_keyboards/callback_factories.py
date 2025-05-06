@@ -79,3 +79,9 @@ class ViolationsActionFactory(CallbackData, prefix="vioact"):
     """Фабрика для callback_data для выбора действия с нарушением."""
 
     action: str
+
+
+class ReportTypeFactory(CallbackData, prefix="reptype"):
+    """Фабрика для callback_data для выбора типа отчета."""
+
+    type: str
