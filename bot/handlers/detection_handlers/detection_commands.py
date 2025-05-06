@@ -52,21 +52,8 @@ async def check_violation(message: types.Message,
     await message.answer("Выберите нарушение для проверки:", reply_markup=violations_kb)
     await state.set_state(ViolationStates.start)
 
-# TODO
-# Утверждение нарушения
-# Удаление нарушения
-# Обновление нарушения
-# Команда получения любого отчёта по нарушениям
-# Суммарный отчет по нарушениям xlsx
-# Получить реальные формы, категория и имена мероприятий
-# REFACTORING
-
-
+# TODO: реализовать команду обновления данных нарушения
 # @router.message(Command("detectupd"))
 # async def update_violation(message: types.Message, access_denied: bool):
 #     """Обновление данных нарушения."""
-#
-#
-# @router.message(Command("detectdel"))
-# async def delete_violation(message: types.Message, access_denied: bool):
-#     """Удаление нарушения."""
+

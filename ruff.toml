@@ -70,7 +70,8 @@ ignore = [
    "S101",  # boolean-default-value-positional-argument
    "FBT002",  # использлвание bool в качестве аргумента функции
    "FBT001",  # использлвание bool в качестве аргумента по усолчанию в функции
-   "SLF001"
+   "SLF001",
+   "PLR0915" # too many statements
 ]
 
 [lint.flake8-quotes]

@@ -20,4 +20,4 @@ class ViolationStates(StatesGroup):
     review = State()
 
     activate = State()
-    delete = State()
+    reject = State()

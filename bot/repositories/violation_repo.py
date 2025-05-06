@@ -24,12 +24,9 @@ class ViolationRepository:
             result = await self.session.execute(select(ViolationModel)
                                                 .where(ViolationModel.id == violation_id)
                                                 .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user))
-
-                                                         ,
+                                                         .options(joinedload(AreaModel.responsible_user)),
                                                          joinedload(ViolationModel.detector),
                                                          ),
-
                                                 )
         except SQLAlchemyError as e:
             await self.session.rollback()
@@ -54,7 +51,12 @@ class ViolationRepository:
     async def get_all_violations(self) -> [dict, ...]:
         """Получение всех мест нарушения."""
         try:
-            result = await self.session.execute(select(ViolationModel))
+            result = await self.session.execute(select(ViolationModel)
+                                                .options(joinedload(ViolationModel.area)
+                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         joinedload(ViolationModel.detector),
+                                                         ),
+                                                )
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting violations")
@@ -67,7 +69,16 @@ class ViolationRepository:
         else:
             violations = tuple(result.scalars().all())
             log.success("{col} violations found successfully", col=len(violations))
-            return [violation.to_dict for violation in violations]
+
+            return tuple([
+                (violation.to_dict() |
+                 {
+                     "area": violation.area.to_dict() | {
+                         "responsible_user": violation.area.responsible_user.to_dict()
+                         if violation.area.responsible_user else None},
+                 }
+                 | {"detector": violation.detector.to_dict()}) for violation in violations
+            ])
 
     async def add_violation(self, violation: ViolationModel) -> ViolationModel | None:
         """Добавление нарушения."""
@@ -87,7 +98,7 @@ class ViolationRepository:
             log.success("Violation {violation} added successfully", violation=violation.description)
             return violation
 
-    async def update_violation(self, violation_id: int, update_data: dict[str, Any]) -> ViolationModel | None:
+    async def update_violation(self, violation_id: int, update_data: dict[str, Any]) -> bool:
         """Обновление места нарушения по id."""
         stmt = (
             update(ViolationModel)
@@ -101,14 +112,15 @@ class ViolationRepository:
             await self.session.rollback()
             log.error("SQLAlchemyError updating violation with id {violation}", violation=violation_id)
             log.exception(e)
-            return None
+            return False
         except Exception as e:
             log.error("Error updating area violation id {violation}", violation=violation_id)
             log.exception(e)
-            return None
+            return False
         else:
             log.success("Violation data with id {violation} updated successfully: {update_data}",
                         violation=violation_id, update_data=update_data)
+            return True
 
     async def delete_violation_by_id(self, violation_id: int) -> None:
         """Удаление данных нарушения по violation_id."""

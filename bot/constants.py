@@ -11,6 +11,7 @@ admin_commands_list = (
     ("area", "Добавить/обновить место нарушения"),
     ("delarea", "Удалить место нарушения"),
     ("check", "Проверка нарушения"),
+    ("report", "Запрос отчётов"),
 )
 otpb_commands_list = (
     ("detect", "Зафиксировать нарушение"),
@@ -21,11 +22,6 @@ common_commands = [dict(zip(bot_kwarg_names, common, strict=False)) for common i
 otpb_commands = ([dict(zip(bot_kwarg_names, otpb, strict=False)) for otpb in otpb_commands_list] + common_commands)
 admin_commands = ([dict(zip(bot_kwarg_names, admin, strict=False)) for admin in admin_commands_list] + otpb_commands)
 
-# id группы в телеграме
-TG_GROUP_ID = -4213770859
-# id суперпользователей в телеграме
-SUPER_USERS_TG_ID = (1238658905,)
-
 # мероприятия для нарушений
 ACTIONS_NEEDED = (
     "Текст мероприятия номер 1",
@@ -33,3 +29,9 @@ ACTIONS_NEEDED = (
     "Текст мероприятия номер 3",
     "Очень длинный текст для мероприятия номер 4",
 )
+
+# id группы в телеграме
+TG_GROUP_ID = -4213770859
+# id суперпользователей в телеграме
+SUPER_USERS_TG_ID = (1238658905,)
+LOCAL_TIMEZONE = 6 * 60

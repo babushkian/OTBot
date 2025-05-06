@@ -22,27 +22,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BASE_DIR / Path(".env"), case_sensitive=False)
 
 
-# global_commands = ({"command": "start", "description": "Начать работу"},
-#                    {"command": "help", "description": "Помощь"})
-
-# Глобальные команды (для всех пользователей)
-# GLOBAL_COMMANDS = [
-#     BotCommand(command="start", description="Начать работу"),
-#     BotCommand(command="help", description="Помощь"),
-# ]
-#
-# # Команды для администраторов
-# ADMIN_COMMANDS = [
-#                      BotCommand(command="admin", description="Админ-панель"),
-#                      BotCommand(command="stats", description="Статистика"),
-#                  ] + GLOBAL_COMMANDS
-
-# Команды для обычных пользователей
-# USER_COMMANDS = GLOBAL_COMMANDS
-
-
 settings = Settings()
 BASEDIR = settings.BASE_DIR
-
-# if __name__ == "__main__":
-#     set_bot_commands()
+REPORTS_DIR = BASEDIR / "violations"
