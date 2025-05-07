@@ -67,7 +67,7 @@ async def handle_get_violation_photo(message: types.Message,
 
 
 @router.callback_query(AreaSelectFactory.filter(), DetectionStates.enter_area)
-async def hendle_set_violation_area(callback: types.CallbackQuery,
+async def handle_set_violation_area(callback: types.CallbackQuery,
                                     state: FSMContext,
                                     callback_data: AreaSelectFactory,
                                     group_user: UserModel,
@@ -169,7 +169,7 @@ async def handle_ok_button(callback: types.CallbackQuery,
                  f"Требуемые мероприятия: {', '.join(ACTIONS_NEEDED[index - 1][:100]
                                                      for index in data['actions_needed'])}")
 
-    await callback.message.answer("Ввод данных завершен.\n"
+    await callback.message.answer("Ввод данных завершен.\n\n"
                                   "Введённые данные:\n"
                                   f"{data_text}.\n\n"
                                   f"Всё верно?\n", reply_markup=generate_yes_no_keyboard())
@@ -195,7 +195,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
                                    )
         success = await violation_repo.add_violation(violation)
         if success:
-            await message.answer(f"Данные нарушения №{data["id"]} сохранены.")
+            await message.answer(f"Данные нарушения №{success.id} сохранены.")
             log.success("Violation data {violation} added", violation=data["description"])
             # оповещаем админов
             user_repo = UserRepository(session)
@@ -203,7 +203,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             admins_telegrams = [admin["telegram_id"] for admin in admins]
             for admin_id in admins_telegrams:
                 await message.bot.send_message(admin_id,
-                                               text=f"Новое нарушение: #{data['id']}\n"
+                                               text=f"Новое нарушение:\n"
                                                     f"Описание: '{data['description']}'.\n"
                                                     f"Зафиксировано {group_user.first_name}.\n"
                                                     f"Номер нарушения {success.id}.\n"
@@ -279,6 +279,7 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
         new_status = {"id": data["id"], "status": ViolationStatus.ACTIVE}
 
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
+        violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
         if success:
             # обратная связь зафиксировавшему нарушение
             await message.bot.send_message(chat_id=data["detector_tg"],
@@ -287,13 +288,21 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
             # отправка в группу
             # pdf_file = REPORTS_DIR / f"report_{data['id']}.pdf"
             # TODO конвертация xlsx в jpg или pdf перед отправкой
+
+            jpeg_file = violation_data["picture"]
             xlsx_file = REPORTS_DIR / f"report_{data['id']}.xlsx"
-            caption = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
+            caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
+            caption_xlsx = f"Детали нарушения №{data['id']}"
             try:
                 await message.bot.send_document(chat_id=TG_GROUP_ID,
                                                 # document=FSInputFile(pdf_file),
+                                                document=BufferedInputFile(jpeg_file,
+                                                                           filename=f"Нарушение №{data['id']}.jpg"),
+                                                caption=caption_jpeg)
+                await message.bot.send_document(chat_id=TG_GROUP_ID,
+                                                # document=FSInputFile(pdf_file),
                                                 document=FSInputFile(xlsx_file),
-                                                caption=caption)
+                                                caption=caption_xlsx)
                 log.debug("Violation report {report} sent to group.", report=data["id"])
             except Exception as e:
                 log.error("Error sending violation report to group.")

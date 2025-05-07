@@ -1,4 +1,4 @@
-"""Репозитории пользователя.."""
+"""Репозитории пользователя."""
 from typing import Any
 
 from sqlalchemy import delete, select, update
@@ -123,7 +123,7 @@ class UserRepository:
             log.success("Approved users found successfully")
             return [user.to_dict() for user in result.scalars().all()]
 
-    async def update_user_by_id(self, user_id: int, update_data: dict[str, Any]) -> None:
+    async def update_user_by_id(self, user_id: int, update_data: dict[str, Any]) -> bool:
         """Обновление данных пользователя по его user_id."""
         stmt = (
             update(UserModel)
@@ -137,14 +137,15 @@ class UserRepository:
             await self.session.rollback()
             log.error("SQLAlchemyError updating user with id {user_id}", user_id=user_id)
             log.exception(e)
-            return
+            return False
         except Exception as e:
             log.error("Error updating user with id {user_id}", user_id=user_id)
             log.exception(e)
-            return
+            return False
         else:
             log.success("User data with id {user_id} updated successfully: {update_data}",
                         user_id=user_id, update_data=update_data)
+            return True
 
     async def delete_user_by_id(self, user_id: int) -> None:
         """Удаление данных пользователя по его user_id."""

@@ -1,9 +1,15 @@
 """Создание отчётов нарушений."""
 import io
-import time
 import datetime
 
+from copy import copy
 from typing import TYPE_CHECKING
+
+from openpyxl.worksheet.worksheet import Worksheet
+
+from bot.constants import LOCAL_TIMEZONE
+from bot.bot_exceptions import InvalidReportParameterError
+from bot.handlers.reports_handlers.reports_utils import print_formating, remove_default_sheet, copy_sheet_with_images
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,9 +36,7 @@ def create_pdf(violation: dict, image_scale: float = 1.0) -> bytes:
     font_path = BASEDIR / "bot" / "fonts" / "DejaVuSans.ttf"
     pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
 
-    pdf.setFont("DejaVuSans", 16)
-
-    pdf.setFont("DejaVuSans", 12)
+    pdf.setFont("DejaVuSans", 14)
     pdf.drawString(50, height - 50, f"Нарушение номер {violation['id']}")
     pdf.drawString(50, height - 70, f"Место обнаружения: {violation['area']['name']}")
 
@@ -83,28 +87,39 @@ def create_pdf(violation: dict, image_scale: float = 1.0) -> bytes:
     return violation_report
 
 
-def create_xlsx(violations: tuple, image_scale: float = 0.3) -> bytes | None:
+def create_xlsx(violations: tuple,
+                image_scale: float = 0.3,
+                ) -> Worksheet | bytes:
     """Отчёт предписания нарушений в формате XLSX."""
+    # report_template = BASEDIR / "bot" / "docs" / "report_template.xlsx" вариант с шаблоном
+    # wb = openpyxl.load_workbook(report_template)
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Предписание"
+    # удаление листа по умолчанию
+    wb = remove_default_sheet(wb)
+
+    # заголовок
     violation_numbers = " ,".join([str(violation["id"]) for violation in violations])
     row = 1
-    # заголовок
+    list_title = f"Нарушения №{violation_numbers}"
+    ws = wb.create_sheet(title=list_title)
+    ws.title = list_title
     ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = f"Предписание нарушений №{violation_numbers}"
+
+    ws[f"A{row}"] = list_title
     row += 1
 
     # дата создания предписания
-    local_tz = datetime.timezone(datetime.timedelta(hours=-time.timezone / 3600))
-
+    local_tz = datetime.timezone(datetime.timedelta(hours=LOCAL_TIMEZONE))
     ws.append(["", "Дата предписания:", datetime.datetime.now(tz=local_tz).strftime("%d.%m.%Y")])
     row += 1
 
-    # пустая строка
+    # пропуск строк для дальнейшего заполнения суммарных отчётов
+    ws.append([])
+
+    row += 1
+    last_header_row = copy(row)
     ws.append([])
     row += 1
-    last_header_row = row
 
     # шапка таблицы
     headers = [
@@ -125,10 +140,12 @@ def create_xlsx(violations: tuple, image_scale: float = 0.3) -> bytes | None:
         ws.column_dimensions["A"].width = 10
 
         # дата/время
-        ws[f"B{row}"] = violation["created_at"].strftime("%d.%m.%Y %H:%M:%S")
+        violation_date: datetime.datetime = violation["created_at"] + datetime.timedelta(hours=LOCAL_TIMEZONE)
+        ws[f"B{row}"] = violation_date.strftime("%d.%m.%Y %H:%M:%S")
         ws.column_dimensions["B"].width = 20
 
         # фото
+        # TODO найти решение для переменного размера фото
         image_stream = io.BytesIO(violation["picture"])
         pil_image = PILImage.open(image_stream)
 
@@ -183,16 +200,46 @@ def create_xlsx(violations: tuple, image_scale: float = 0.3) -> bytes | None:
                                          top=Side(style="thin"),
                                          bottom=Side(style="thin"))
 
+    print_formating(ws)
+
+    # отчёт об одном нарушении
     if len(violations) == 1:
-        # отчёт об одном нарушении
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
         result = output.getvalue()
 
         # Копия на диск
-        filename: Path = REPORTS_DIR / f"report_{violations[0]['id']}.xlsx"
-        with filename.open("wb") as pdf_file:
-            pdf_file.write(result)
+        report_file: Path = REPORTS_DIR / f"report_{violations[0]['id']}.xlsx"
+        with report_file.open("wb") as xlsx_file:
+            xlsx_file.write(result)
 
         return result
+
+    return ws
+
+
+def create_report(violations: tuple, image_scale: float = 0.3) -> bytes | None:
+    """Создание суммарного отчёта."""
+    # TODO найти решение для включения листа с одним нарушением в суммарный отчёт
+    if len(violations) == 1:
+        raise InvalidReportParameterError
+
+    wb = Workbook()
+    wb = remove_default_sheet(wb)
+
+    wb.create_sheet(title="Статистика")
+
+    violation_areas = {violation["area"]["name"] for violation in violations}
+
+    for area in violation_areas:
+        area_violations = tuple([violation for violation in violations if violation["area"]["name"] == area])
+
+        if len(area_violations) > 1:
+            copy_sheet_with_images(target_wb=wb,
+                                   source_ws=create_xlsx(area_violations,
+                                                         image_scale),
+                                   ws_title=f"{area}"[:30])
+
+    sum_report_file: Path = REPORTS_DIR / "sum_reports" / "sum_report.xlsx"
+    wb.save(sum_report_file)
