@@ -71,7 +71,8 @@ ignore = [
    "FBT002",  # использлвание bool в качестве аргумента функции
    "FBT001",  # использлвание bool в качестве аргумента по усолчанию в функции
    "SLF001",
-   "PLR0915" # too many statements
+   "PLR0915", # too many statements
+   "W291" # whitespace in line
 ]
 
 [lint.flake8-quotes]

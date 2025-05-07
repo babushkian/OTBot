@@ -4,7 +4,9 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.enums import UserRole
 from bot.constants import TG_GROUP_ID, SUPER_USERS_TG_ID
+from bot.db.models import UserModel
 from bot.repositories.user_repo import UserRepository
 from bot.handlers.approve_handlers.states import ApproveUserStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
@@ -17,13 +19,13 @@ from bot.keyboards.inline_keyboards.callback_factories import (
 router = Router(name=__name__)
 
 
-# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("approve"))
 async def approve_command(message: types.Message,
                           session: AsyncSession,
-                          state: FSMContext) -> None:
+                          state: FSMContext,
+                          group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    if message.from_user.id not in SUPER_USERS_TG_ID:
+    if group_user.user_role != UserRole.ADMIN:
         return
 
     user_repo = UserRepository(session)
@@ -43,11 +45,10 @@ async def approve_command(message: types.Message,
     await state.set_state(ApproveUserStates.started)
 
 
-# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("disapprove"))
-async def disapprove_command(message: types.Message, session: AsyncSession) -> None:
+async def disapprove_command(message: types.Message, session: AsyncSession, group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    if message.from_user.id not in SUPER_USERS_TG_ID:
+    if group_user.user_role != UserRole.ADMIN:
         return
 
     user_repo = UserRepository(session)
