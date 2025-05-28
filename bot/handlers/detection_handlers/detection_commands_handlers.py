@@ -89,7 +89,7 @@ async def handle_set_violation_category(callback: types.CallbackQuery,
                                         callback_data: ViolationCategoryFactory,
                                         group_user: UserModel,
                                         ) -> None:
-    """Обрабатывает заполнение места нарушения."""
+    """Обрабатывает заполнение категории нарушения."""
     await state.update_data(category=callback_data.category)
 
     actions_to_kb = [{"id": index, "text": action[:200]} for index, action
