@@ -4,12 +4,15 @@ import json
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 from bot.config import BASEDIR
+from bot.constants import VIOLATION_CATEGORY_JSON_FILE
 
 
-def create_inline_buttons_from_excel(excel_file: Path, json_file: Path | None = None,
+def create_inline_buttons_from_excel(excel_workbook: Workbook,
+                                     json_file: Path | None = None,
                                      ) -> list[dict[str, dict[str, str]]]:
     """Создание всех inline кнопок из таблицы excel."""
 
@@ -38,8 +41,8 @@ def create_inline_buttons_from_excel(excel_file: Path, json_file: Path | None = 
                         }
         return res
 
-    wb = load_workbook(filename=excel_file)
-    ws = wb.active
+    # wb = load_workbook(filename=excel_file)
+    ws = excel_workbook.active
 
     button_layers = [_get_one_button_with_content(col, ws) for col in range(ws.max_column - 1)]
 
@@ -50,7 +53,14 @@ def create_inline_buttons_from_excel(excel_file: Path, json_file: Path | None = 
     return button_layers
 
 
+def read_categories_json_file() -> list:
+    """Чтение json файла с inline кнопками категорий нарушений."""
+    with VIOLATION_CATEGORY_JSON_FILE.open("r", encoding="utf-8") as json_file:
+        return json.load(json_file)
+
+
 if __name__ == "__main__":
     _file_path = BASEDIR / "misc" / "ot_bot_inline_buttons.xlsx"
     _json_file = BASEDIR / "misc" / "inline_buttons.json"
-    result = create_inline_buttons_from_excel(_file_path, json_file=_json_file)
+    wb = load_workbook(filename=_file_path)
+    result = create_inline_buttons_from_excel(excel_workbook=wb, json_file=_json_file)

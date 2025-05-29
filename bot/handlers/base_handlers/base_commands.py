@@ -1,4 +1,6 @@
 """Базовые команды telegram."""
+
+
 from aiogram import Router, types
 from aiogram.types import FSInputFile
 from aiogram.filters import Command, CommandStart
@@ -65,3 +67,6 @@ async def command_help(message: types.Message, user: UserModel | None) -> None:
         """Для начала работы с ботом необходима регистрация. Для этого, введите команду /start.\n""")
 
     await message.answer(text=help_text)
+
+
+

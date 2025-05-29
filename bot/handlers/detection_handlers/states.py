@@ -8,6 +8,12 @@ class DetectionStates(StatesGroup):
     start = State()
     send_photo = State()
     enter_area = State()
+    next_layer_select_category = State()
+
+    first_layer_select_category = State()
+    second_layer_select_category = State()
+    third_layer_select_category = State()  # для увеличения глубины выбора категории
+
     select_category = State()
     select_actions_needed = State()
     completed = State()

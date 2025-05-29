@@ -5,7 +5,7 @@ from aiogram.types import FSInputFile, BufferedInputFile, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.enums import UserRole, ViolationStatus, ViolationCategory
+from bot.enums import UserRole, ViolationStatus
 from bot.config import REPORTS_DIR
 from bot.constants import TG_GROUP_ID, ACTIONS_NEEDED
 from bot.db.models import UserModel, ViolationModel
@@ -16,8 +16,6 @@ from bot.keyboards.common_keyboards import generate_cancel_button, generate_yes_
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
 from bot.handlers.reports_handlers.create_reports import create_xlsx
-
-# from bot.handlers.reports_handlers.create_reports import create_pdf
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import (
     AreaSelectFactory,
@@ -26,9 +24,15 @@ from bot.keyboards.inline_keyboards.callback_factories import (
     ViolationCategoryFactory,
     MultiSelectCallbackFactory,
 )
-from bot.handlers.detection_handlers.detection_keyboards import violation_categories_kb
+from bot.handlers.detection_handlers.detection_keyboards import (
+    violation_categories_first_kb,
+    get_violation_category_by_cell_id,
+    create_violation_keyboard_by_cell_id,
+)
 
 router = Router(name=__name__)
+
+
 # TODO разнести логику ввода и одобрения/отклонения нарушения по разным файлам
 
 
@@ -67,20 +71,45 @@ async def handle_get_violation_photo(message: types.Message,
 
 
 @router.callback_query(AreaSelectFactory.filter(), DetectionStates.enter_area)
-async def handle_set_violation_area(callback: types.CallbackQuery,
-                                    state: FSMContext,
-                                    callback_data: AreaSelectFactory,
-                                    group_user: UserModel,
-                                    ) -> None:
-    """Обрабатывает заполнение места нарушения."""
+async def handle_set_first_layer_violation_area(callback: types.CallbackQuery,
+                                                state: FSMContext,
+                                                callback_data: AreaSelectFactory,
+                                                group_user: UserModel,
+                                                ) -> None:
+    """Обрабатывает выбор первого уровня вложенности места нарушения."""
     await state.update_data(area_id=callback_data.id)
 
-    await callback.message.answer("Выберите категорию нарушения:",
-                                  reply_markup=await violation_categories_kb())
+    first_violation_keyboard = await violation_categories_first_kb()
+
+    await callback.message.answer("Выберите категорию нарушения:", reply_markup=first_violation_keyboard)
+
     await callback.answer("Выбрано место нарушения.")
 
-    await state.set_state(DetectionStates.select_category)
+    await state.set_state(DetectionStates.next_layer_select_category)
+
     log.debug(f"User {group_user.first_name} choose violation area.")
+
+
+@router.callback_query(ViolationCategoryFactory.filter(), DetectionStates.next_layer_select_category)
+async def handle_set_second_layer_violation_category(callback: types.CallbackQuery,
+                                                     state: FSMContext,
+                                                     callback_data: ViolationCategoryFactory,
+                                                     group_user: UserModel,
+                                                     ) -> None:
+    """Обрабатывает выбор второго уровня вложенности места нарушения."""
+    # получение содержания первого уровня категории
+    next_layer_keyboard_key = callback_data.category
+    next_violation_keyboard = await create_violation_keyboard_by_cell_id(cell_id=next_layer_keyboard_key)
+
+    if next_violation_keyboard is not None:
+        # следующий уровень клавиатуры
+        await callback.message.answer("Выберите подкатегорию категорию нарушения:",
+                                      reply_markup=next_violation_keyboard)
+        await callback.answer("Выбран второй уровень категории нарушения.")
+        await state.set_state(DetectionStates.next_layer_select_category)
+    else:
+        # если клавиатуры нет, то запускаем следующий шаг
+        await handle_set_violation_category(callback, state, callback_data, group_user)
 
 
 @router.callback_query(ViolationCategoryFactory.filter(), DetectionStates.select_category)
@@ -90,10 +119,11 @@ async def handle_set_violation_category(callback: types.CallbackQuery,
                                         group_user: UserModel,
                                         ) -> None:
     """Обрабатывает заполнение категории нарушения."""
-    await state.update_data(category=callback_data.category)
-
+    category = await get_violation_category_by_cell_id(callback_data.category)
+    await state.update_data(category=category)
+    actions = [line["action"] for line in ACTIONS_NEEDED]
     actions_to_kb = [{"id": index, "text": action[:200]} for index, action
-                     in enumerate(ACTIONS_NEEDED, start=1)]
+                     in enumerate(actions, start=1)]
 
     await callback.message.answer("Выберите мероприятия для устранения нарушения:",
                                   reply_markup=await create_multi_select_keyboard(items=actions_to_kb),
@@ -163,11 +193,13 @@ async def handle_ok_button(callback: types.CallbackQuery,
     await callback.message.bot.send_photo(chat_id=user_tg, photo=photo_file, caption=caption)
 
     # текст для проверки
+    # actions = [line["action"] for line in ACTIONS_NEEDED]
+    actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in ACTIONS_NEEDED]
     data_text = (f"\nМесто нарушения: {area.name}\n"
                  f"Описание: {data['description']}\n"
-                 f"Категория: {ViolationCategory[data['category']]}\n"
-                 f"Требуемые мероприятия: {', '.join(ACTIONS_NEEDED[index - 1][:100]
-                                                     for index in data['actions_needed'])}")
+                 f"Категория: {data['category']}\n"
+                 f"Требуемые мероприятия: {',\n'.join(actions[index - 1][:100]
+                                                      for index in data['actions_needed'])}")
 
     await callback.message.answer("Ввод данных завершен.\n\n"
                                   "Введённые данные:\n"
@@ -183,6 +215,8 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
     """Обработчик для ответов "Да" или "Нет" при обнаружении нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
+        # actions = [line["action"] for line in ACTIONS_NEEDED]
+        actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in ACTIONS_NEEDED]
         violation_repo = ViolationRepository(session)
         violation = ViolationModel(area_id=data["area_id"],
                                    description=data["description"],
@@ -190,8 +224,8 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
                                    category=data["category"],
                                    status=data["status"],
                                    picture=data["picture"],
-                                   actions_needed=", ".join(ACTIONS_NEEDED[index - 1]
-                                                            for index in data["actions_needed"]),
+                                   actions_needed=",\n".join(actions[index - 1]
+                                                             for index in data["actions_needed"]),
                                    )
         success = await violation_repo.add_violation(violation)
         if success:

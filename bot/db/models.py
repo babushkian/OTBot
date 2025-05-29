@@ -4,7 +4,7 @@ from sqlalchemy import TEXT, BIGINT, String, ForeignKey, LargeBinary, true, fals
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from sqlalchemy.dialects.sqlite import JSON
 
-from bot.enums import UserRole, ViolationStatus, ViolationCategory
+from bot.enums import UserRole, ViolationStatus
 from bot.db.database import Base
 
 
@@ -42,7 +42,7 @@ class ViolationModel(Base):
     picture: Mapped[bytes] = mapped_column(LargeBinary)
     description: Mapped[str] = mapped_column(String(200))
     status: Mapped[ViolationStatus] = mapped_column(default=ViolationStatus.ACTIVE)
-    category: Mapped[ViolationCategory]
+    category: Mapped[str]
     actions_needed: Mapped[str] = mapped_column(TEXT)  # Мероприятия по устранению нарушения
 
     def __str__(self) -> str:

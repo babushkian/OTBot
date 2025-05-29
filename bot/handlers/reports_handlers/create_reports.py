@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from openpyxl.worksheet.worksheet import Worksheet
 
-from bot.constants import LOCAL_TIMEZONE
+from bot.constants import COPY_TO, LOCAL_TIMEZONE
 from bot.bot_exceptions import InvalidReportParameterError
 from bot.handlers.reports_handlers.reports_utils import print_formating, remove_default_sheet, copy_sheet_with_images
 
@@ -96,22 +96,43 @@ def create_xlsx(violations: tuple,
     wb = Workbook()
     # удаление листа по умолчанию
     wb = remove_default_sheet(wb)
-
-    # заголовок
     violation_numbers = " ,".join([str(violation["id"]) for violation in violations])
-    row = 1
-    list_title = f"Нарушения №{violation_numbers}"
+    list_title = f"Предписание №{violation_numbers}"
     ws = wb.create_sheet(title=list_title)
     ws.title = list_title
-    ws.merge_cells(f"A{row}:F{row}")
 
-    ws[f"A{row}"] = list_title
+    # ответственному
+    row = 1
+    ws[f"F{row}"] = "Ответственному:"
     row += 1
+    responsible_mans = []
+    for violation in violations:
+        if violation["area"].get("responsible"):
+            responsible_mans.append(violation["area"]["responsible"])
+        else:
+            responsible_mans.append(violation["area"]["responsible_text"])
+    for responsible in set(responsible_mans):
+        ws[f"F{row}"] = responsible
+        row += 1
+
+    # копия
+    for line in COPY_TO:
+        ws[f"F{row}"] = line
+        row += 1
+
+    # заголовок
+    row += 1
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = list_title
 
     # дата создания предписания
-    local_tz = datetime.timezone(datetime.timedelta(hours=LOCAL_TIMEZONE))
-    ws.append(["", "Дата предписания:", datetime.datetime.now(tz=local_tz).strftime("%d.%m.%Y")])
     row += 1
+    local_tz = datetime.timezone(datetime.timedelta(hours=LOCAL_TIMEZONE))
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = f"Дата предписания: {datetime.datetime.now(tz=local_tz).strftime("%d.%m.%Y")}"
+    row += 1
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = "Устранить следующие нарушения:"
 
     # пропуск строк для дальнейшего заполнения суммарных отчётов
     ws.append([])
@@ -190,16 +211,36 @@ def create_xlsx(violations: tuple,
         ws.column_dimensions["E"].width = 30
         ws.column_dimensions["F"].width = 20
 
-        # форматирование таблицы
-        for table_row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in table_row:
-                cell.alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
-                if cell.row > last_header_row:
-                    cell.border = Border(left=Side(style="thin"),
-                                         right=Side(style="thin"),
-                                         top=Side(style="thin"),
-                                         bottom=Side(style="thin"))
+    # форматирование таблицы
+    for table_row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in table_row:
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
+            if cell.row > last_header_row:
+                cell.border = Border(left=Side(style="thin"),
+                                     right=Side(style="thin"),
+                                     top=Side(style="thin"),
+                                     bottom=Side(style="thin"))
 
+    # футер с подписями
+    row += 2
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = ("О выполнении настоящего предписания прошу сообщить по каждому пункту согласно сроку "
+                     "устранения письменно.")
+
+    row += 2
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = "Предписание выдал:"
+
+    row += 2
+    ws.append([])
+    ws.append(["дата:", "", "подпись", "Ф.И.О.", "", "Должность"])
+
+    row += 2
+    ws.merge_cells(f"A{row}:F{row}")
+    ws[f"A{row}"] = "Контроль устранения нарушений провел:"
+
+    ws.append([])
+    ws.append(["дата:", "", "подпись", "Ф.И.О.", "", "Должность"])
     print_formating(ws)
 
     # отчёт об одном нарушении
