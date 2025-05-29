@@ -1,6 +1,9 @@
 """Общие утилиты для бота."""
 import re
 
+from datetime import datetime, timezone, timedelta
+
+from bot.constants import LOCAL_TIMEZONE
 from bot.bot_exceptions import StringInputError, EmptyValueInputError
 
 
@@ -29,3 +32,9 @@ def verify_string_as_integer(input_string: str) -> tuple[bool, str | None]:
         return False, "Введите целое число."
     else:
         return True, None
+
+
+def get_fix_date(days: int) -> str:
+    """Возвращает дату в формате DD.MM.YYYY, устранения нарушения от текущего дня."""
+    local_tz = timezone(timedelta(hours=LOCAL_TIMEZONE))
+    return (datetime.now(tz=local_tz) + timedelta(days=days)).strftime("%d.%m.%Y")

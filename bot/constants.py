@@ -1,6 +1,9 @@
 """Константы бота."""
 import time
 
+from bot.config import BASEDIR
+from bot.common_utils import get_fix_date
+
 # команды меню пользователей
 common_commands_list = (
     ("start", "Начать работу"),
@@ -26,10 +29,21 @@ admin_commands = ([dict(zip(bot_kwarg_names, admin, strict=False)) for admin in 
 
 # мероприятия для нарушений
 ACTIONS_NEEDED = (
-    "Текст мероприятия номер 1",
-    "Текст мероприятия номер 2",
-    "Текст мероприятия номер 3",
-    "Очень длинный текст для мероприятия номер 4",
+    # {"action": "Провести внеплановый инструктаж", "fix_time": "1 день"},
+    # {"action": "Оградить опасную зону", "fix_time": "2 дня"},
+    # {"action": "Отстранить от работы", "fix_time": "3 дня"},
+    # {"action": "Превести в соответствие", "fix_time": "5 дней"},
+    # {"action": "Организовать безопасное складирование деталей", "fix_time": "7 дней"},
+    # {"action": "Усилить контроль за выполнением работ", "fix_time": "14 дней"},
+    # {"action": "Устранить", "fix_time": "Немедленно"},
+    {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1)},
+    {"action": "Оградить опасную зону", "fix_time": get_fix_date(days=2)},
+    {"action": "Отстранить от работы", "fix_time": get_fix_date(days=3)},
+    {"action": "Превести в соответствие", "fix_time": get_fix_date(days=5)},
+    {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=7)},
+    {"action": "Усилить контроль за выполнением работ", "fix_time": get_fix_date(days=14)},
+    {"action": "Устранить", "fix_time": "Немедленно"},
+
 )
 
 # id группы в телеграмм
@@ -39,3 +53,7 @@ TG_GROUP_LINK = "free_orders"
 # id суперпользователей в телеграмм
 SUPER_USERS_TG_ID = (1238658905, 1881884886)
 LOCAL_TIMEZONE = -time.timezone / 3600
+VIOLATION_CATEGORY_JSON_FILE = BASEDIR / "bot" / "keyboards" / "category_buttons.json"
+
+# текстовые поля для отчётов
+COPY_TO = ("Копия:", "главному инженеру ЗАО 'ОмЗиТ'", "Новикову А.Н.", "от ООТ,ПБ и ООС")
