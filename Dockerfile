@@ -1,5 +1,7 @@
 FROM python:3.13-slim
 
+ENV PYTHONUNBUFFERED=1
+
 RUN pip install uv
 
 WORKDIR /app
@@ -17,9 +19,8 @@ CMD ["python", "main.py"]
 # create image:
     # docker build -t otbot .
 
-
 # run container:
-    # docker run -d -v "$(pwd)/bot.db:/app/bot.db" -v "$(pwd)/violations:/app/violations" --name otbot-instance otbot
+    # docker run -d -v "$(pwd)/bot.db:/app/bot.db" -v "$(pwd)/violations:/app/violations" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
 
 # other commands:
     # docker ps -a  # Увидеть все контейнеры
