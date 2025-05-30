@@ -239,6 +239,8 @@ async def delete_area(callback: types.CallbackQuery,
     await area_repo.delete_area_by_id(area_id=area_id)
 
     await callback.answer("Место нарушения удалёно из базы данных.")
+    await callback.message.answer("Место нарушения успешно удалёно из базы данных.")
+    await callback.message.edit_reply_markup(reply_markup=None)
     log.success("User {user} deleted from database", user=area_id)
 
 

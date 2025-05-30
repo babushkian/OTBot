@@ -51,7 +51,7 @@ async def create_multi_select_keyboard(items: list[dict]) -> InlineKeyboardMarku
                                                      action="select"),
         )
 
-        # Добавляем кнопку "ОК"
+    # Добавляем кнопку "ОК"
     builder.button(
         text="✅ ОК",
         callback_data=MultiSelectCallbackFactory(action="ok"),
