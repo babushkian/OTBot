@@ -3,7 +3,6 @@ import re
 
 from datetime import datetime, timezone, timedelta
 
-from bot.constants import LOCAL_TIMEZONE
 from bot.bot_exceptions import StringInputError, EmptyValueInputError
 
 
@@ -34,7 +33,6 @@ def verify_string_as_integer(input_string: str) -> tuple[bool, str | None]:
         return True, None
 
 
-def get_fix_date(days: int) -> str:
+def get_fix_date(days: int, tz: timezone = timezone(timedelta(hours=6))) -> str:
     """Возвращает дату в формате DD.MM.YYYY, устранения нарушения от текущего дня."""
-    local_tz = timezone(timedelta(hours=LOCAL_TIMEZONE))
-    return (datetime.now(tz=local_tz) + timedelta(days=days)).strftime("%d.%m.%Y")
+    return (datetime.now(tz=tz) + timedelta(days=days)).strftime("%d.%m.%Y")
