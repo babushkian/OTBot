@@ -25,7 +25,7 @@ async def approve_command(message: types.Message,
                           state: FSMContext,
                           group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    if group_user.user_role != UserRole.ADMIN:
+    if group_user.telegram_id not in SUPER_USERS_TG_ID:
         return
 
     user_repo = UserRepository(session)
@@ -69,9 +69,13 @@ async def disapprove_command(message: types.Message, session: AsyncSession, grou
 
 # TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("delapprove"))
-async def delete_command(message: types.Message, session: AsyncSession) -> None:
+async def delete_command(message: types.Message,
+                         session: AsyncSession,
+                         group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    if message.from_user.id not in SUPER_USERS_TG_ID:
+    # if message.from_user.id not in SUPER_USERS_TG_ID:
+    #     return
+    if group_user.user_role != UserRole.ADMIN:
         return
 
     user_repo = UserRepository(session)
