@@ -282,5 +282,7 @@ def create_report(violations: tuple, image_scale: float = 0.3) -> bytes | None:
                                                          image_scale),
                                    ws_title=f"{area}"[:30])
 
-    sum_report_file: Path = REPORTS_DIR / "sum_reports" / "sum_report.xlsx"
-    wb.save(sum_report_file)
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
