@@ -1,11 +1,16 @@
 """Обработчики команд для отчётов."""
 from typing import TYPE_CHECKING
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.repositories.violation_repo import ViolationRepository
+from bot.handlers.reports_handlers.create_reports import create_report
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 from aiogram import Router, types
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.config import REPORTS_DIR
@@ -24,6 +29,7 @@ async def handle_report_type_select(callback: types.CallbackQuery,
                                     callback_data: ReportTypeFactory,
                                     state: FSMContext,
                                     group_user: UserModel,
+                                    session: AsyncSession,
                                     ) -> None:
     """Обработка выбора типа отчёта."""
     match callback_data.type:
@@ -31,14 +37,33 @@ async def handle_report_type_select(callback: types.CallbackQuery,
             await callback.message.answer("Введите номер нарушения:", reply_markup=generate_cancel_button())
             await state.set_state(ReportStates.by_id)
             log.debug(f"User {group_user.first_name} selected report type 'by_id'.")
-        case "active":
-            await state.set_state(ReportStates.active)
 
-            log.debug(f"User {group_user.first_name} selected report type 'active'.")
         case "sum":
-            await state.set_state(ReportStates.sum)
+            # отправка суммарного отчёта
+            try:
+                violation_repo = ViolationRepository(session)
+                violations = await violation_repo.get_all_violations()
+                result_report = create_report(violations)
+                photo_file = BufferedInputFile(result_report, filename="report.xlsx")
+                user_tg = callback.from_user.id
+                await callback.message.bot.send_document(chat_id=user_tg,
+                                                         document=photo_file,
+                                                         caption="Отчёт.")
+                await callback.message.answer("Отчёт сгенерирован.")
+            except Exception as e:
+                log.error("Error generating report for user {group_user}.", group_user=group_user.first_name)
+                log.exception(e)
+            else:
+                log.debug("User {user} selected report type 'sum'.",
+                          user=group_user.first_name)
+                log.debug("User {user} generated report successfully.",
+                          user=group_user.first_name)
 
-            log.debug(f"User {group_user.first_name} selected report type 'sum'.")
+        case "active":
+            # TODO implementation
+            # await state.set_state(ReportStates.active)
+            log.debug(f"User {group_user.first_name} selected report type 'active'.")
+            await callback.message.answer("Функционал пока не реализован.")
 
     await callback.answer("Выбран тип отчёта.")
 
@@ -46,6 +71,7 @@ async def handle_report_type_select(callback: types.CallbackQuery,
 @router.message(ReportStates.by_id)
 async def handle_report_by_id(message: types.Message, state: FSMContext, group_user: UserModel) -> None:
     """Обработка ввода номера нарушения."""
+    # TODO convert to pdf using Typst?
     violation_id = message.text
     verified_input = verify_string_as_integer(violation_id)
     if not verified_input[0]:
@@ -77,4 +103,3 @@ async def handle_report_by_id(message: types.Message, state: FSMContext, group_u
         log.debug("Violation report №{violation_id} sent to user {group_user}.",
                   group_user=group_user.first_name,
                   violation_id=violation_id)
-

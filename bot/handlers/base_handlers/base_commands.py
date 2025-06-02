@@ -43,7 +43,7 @@ async def command_instruction(message: types.Message,
         log.warning("Пользователь без доступа с tg_id {user_id} запросил инструкцию.",
                     user_id=message.from_user.id)
         return
-    instruction_file = BASEDIR / "bot" / "docs" / "OTBot instruction.pdf"
+    instruction_file = BASEDIR / "bot" / "docs" / "docs OTBot.pdf"
     caption = "Инструкция OTBot"
     await message.bot.send_document(chat_id=message.from_user.id,
                                     document=FSInputFile(instruction_file),
