@@ -41,7 +41,6 @@ def create_inline_buttons_from_excel(excel_workbook: Workbook,
                         }
         return res
 
-    # wb = load_workbook(filename=excel_file)
     ws = excel_workbook.active
 
     button_layers = [_get_one_button_with_content(col, ws) for col in range(ws.max_column - 1)]

@@ -8,6 +8,7 @@ from bot.handlers.approve_handlers import router as approve_handlers_router
 from bot.handlers.reports_handlers import router as reports_handlers_router
 from bot.middlewares.db_middleware import DbSessionMiddleware
 from bot.handlers.detection_handlers import router as detection_handlers_router
+from bot.handlers.violation_handlers import router as violation_handlers_router
 from bot.middlewares.user_middleware import UserCheckMiddleware
 
 router = Router(name=__name__)
@@ -43,6 +44,11 @@ reports_handlers_router.callback_query.middleware.register(DbSessionMiddleware(s
 reports_handlers_router.message.middleware.register(UserCheckMiddleware())
 reports_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
 
+# violation_handler
+violation_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
+violation_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
+violation_handlers_router.message.middleware.register(UserCheckMiddleware())
+violation_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
 
 router.include_routers(
     main_base_commands_router,
@@ -51,4 +57,5 @@ router.include_routers(
     area_handlers_router,
     detection_handlers_router,
     reports_handlers_router,
+    violation_handlers_router,
 )

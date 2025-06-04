@@ -1,8 +1,12 @@
 ---
-title: OTBot readme
+title: OTBot README
 created: 30.05.2025
-modified: 30.05.2025
+modified: 04.06.2025
 ---
+# Предназначение бота
+- Бот предназначен для автоматизации процессов создания и учёта предписаний, хранения информации и  создания статистических отчётов для отдела охраны труда. Подробная инструкция пользователя доступна в папке `/bot/docs`.
+
+# Установка 
 - Клонировать проект:
 ```bash
 git clone <project link>
@@ -16,14 +20,36 @@ SUPER_USER_TG_ID=1234567890
 ```
 
 - Установить uv на сервер.
+```bash
+pip install uv
+```
+
 - Установить виртуальное окружение с зависимостями:
 ```bash
 uv sync
 ```
 
-- создать папку `violations` в корне проекта
+- Установить [typst](https://typst.app/), который используется для генерации pdf отчетов:
 ```bash
-mkdir violations
+# windows
+winget install --id Typst.Typst # возможно потребуется добавление typst в PATH
+
+# linux
+# Скачать последнюю версию (замените X.X.X на актуальную версию)
+wget https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz
+
+# Распаковать
+tar -xvf typst-x86_64-unknown-linux-musl.tar.xz
+
+# перейти в распакованеную папке typst-x86_64-unknown-linux-musl
+cd typst-x86_64-unknown-linux-musl
+
+# Переместить в /usr/local/bin (требует sudo)
+sudo mv typst /usr/local/bin/
+
+# Проверить установку
+typst --version
+# папке typst-x86_64-unknown-linux-musl можно удалить
 ```
 
 - установить миграции:
@@ -45,7 +71,7 @@ docker build -t otbot .
 ```
 - запуск контейнера
 ```bash
-docker run -d -v "$(pwd)/bot.db:/app/bot.db" -v "$(pwd)/violations:/app/violations" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
+docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
 ```
 - команды управления 
 ```bash
@@ -57,7 +83,8 @@ docker rm otbot-instance # Удалить контейнер
 
 ## Окончательная настройка
 - После запуска бота:
-    - Выполните настройки клавиатур передачей соответствующих excel таблиц (смотри инструкцию по использованию).
+    - Пользователи могут провести настройку клавиатур для категорий нарушений (оприсано в инструкции пользователя).
+    - Пользователи могут выполнить настройку отчётов (описано в инструкции пользователя).
     - Зарегистрируйте пользователей и назначьте роли ответственных (смотри инструкцию по использованию).
     - Создайте места нарушения с помощью команд бота (смотри инструкцию по использованию).
 - получить инструкцию пользователя можно командой бота:  `/instruction` или найти ссылку в команде `/help` или в папке проекта`/bot/docs`

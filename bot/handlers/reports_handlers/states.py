@@ -9,3 +9,5 @@ class ReportStates(StatesGroup):
     by_id = State()
     active = State()
     sum = State()
+    stat = State()
+    date_range = State()

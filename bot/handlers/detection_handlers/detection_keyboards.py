@@ -1,5 +1,4 @@
 """Клавиатуры для фиксации нарушения."""
-import asyncio
 
 from aiogram.types import InlineKeyboardMarkup
 
@@ -51,9 +50,3 @@ async def get_violation_category_by_cell_id(cell_id: str) -> str | None:
         if category_name is not None:
             break
     return category_name
-
-
-if __name__ == "__main__":
-    # result = asyncio.run(create_violation_keyboard_by_cell_id("B4"))
-    # result = asyncio.run(violation_categories_first_kb())
-    result = asyncio.run(get_violation_category_by_cell_id("B4"))

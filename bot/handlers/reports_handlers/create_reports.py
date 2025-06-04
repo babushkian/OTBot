@@ -1,98 +1,38 @@
 """Создание отчётов нарушений."""
 import io
 import datetime
+import platform
+import subprocess
 
 from copy import copy
-from typing import TYPE_CHECKING
-
-from openpyxl.worksheet.worksheet import Worksheet
-
-from bot.constants import COPY_TO, LOCAL_TIMEZONE
-from bot.bot_exceptions import InvalidReportParameterError
-from bot.handlers.reports_handlers.reports_utils import print_formating, remove_default_sheet, copy_sheet_with_images
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
+from collections import defaultdict
 
 from PIL import Image as PILImage
 from openpyxl import Workbook
 from openpyxl.styles import Side, Border, Alignment
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.lib.utils import ImageReader
 from openpyxl.drawing.image import Image as OpenpyxlImage
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfbase.ttfonts import TTFont
+from openpyxl.worksheet.worksheet import Worksheet
 
+from bot.enums import ViolationStatus
 from bot.config import BASEDIR, REPORTS_DIR
+from bot.constants import COPY_TO, LOCAL_TIMEZONE
+from bot.db.models import UserModel
+from logger_config import log
+from bot.bot_exceptions import InvalidReportParameterError
+from bot.handlers.reports_handlers.reports_utils import (
+    generate_typst,
+    print_formating,
+    remove_default_sheet,
+    copy_sheet_with_images,
+)
 
-
-def create_pdf(violation: dict, image_scale: float = 1.0) -> bytes:
-    """Создание и сохранение pdf отчёта одного нарушения."""
-    packet = io.BytesIO()
-    pdf = canvas.Canvas(packet, pagesize=letter)
-    width, height = letter
-
-    font_path = BASEDIR / "bot" / "fonts" / "DejaVuSans.ttf"
-    pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
-
-    pdf.setFont("DejaVuSans", 14)
-    pdf.drawString(50, height - 50, f"Нарушение номер {violation['id']}")
-    pdf.drawString(50, height - 70, f"Место обнаружения: {violation['area']['name']}")
-
-    # ответственный
-    responsible = (
-        violation["area"]["responsible_text"]
-        if not violation["area"]["responsible_user"]
-        else violation["area"]["responsible_user"].get("first_name", "")
-    )
-    pdf.drawString(50, height - 90, f"Ответственный: {responsible}")
-    pdf.drawString(50, height - 110, f"Описание: {violation['description']}")
-
-    # изображение
-    if violation["picture"]:
-        image_stream = io.BytesIO(violation["picture"])
-        pil_image = PILImage.open(image_stream)
-
-        # масштаб
-        img_width, img_height = pil_image.size
-        scaled_width = img_width * image_scale
-        scaled_height = img_height * image_scale
-
-        image_buffer = io.BytesIO()
-        pil_image.save(image_buffer, format="JPEG")
-        image_buffer.seek(0)
-
-        image_reader = ImageReader(image_buffer)
-
-        pdf.drawImage(image_reader, 50, height - 130 - scaled_height, width=scaled_width, height=scaled_height)
-
-    # мероприятия
-    actions = violation["actions_needed"]
-    pdf.drawString(50, height - 150 - scaled_height, f"Мероприятия: {actions}")
-    # создано
-    created_by = f"{violation['created_at']} {violation['detector']['first_name']} {violation['detector']['user_role']}"
-    pdf.drawString(50, height - 150 - scaled_height - 20, f"Создано: {created_by}")
-    pdf.drawString(50, height - 150 - scaled_height - 20, f"Создано: {created_by}")
-
-    pdf.save()
-    packet.seek(0)
-    violation_report = packet.getvalue()
-
-    # копия на диск
-    filename: Path = REPORTS_DIR / f"report_{violation['id']}.pdf"
-    with filename.open("wb") as pdf_file:
-        pdf_file.write(violation_report)
-
-    return violation_report
-
+# TODO remove deprecated functions
 
 def create_xlsx(violations: tuple,
                 image_scale: float = 0.3,
                 ) -> Worksheet | bytes:
     """Отчёт предписания нарушений в формате XLSX."""
-    # report_template = BASEDIR / "bot" / "docs" / "report_template.xlsx" вариант с шаблоном
-    # wb = openpyxl.load_workbook(report_template)
     wb = Workbook()
     # удаление листа по умолчанию
     wb = remove_default_sheet(wb)
@@ -166,7 +106,6 @@ def create_xlsx(violations: tuple,
         ws.column_dimensions["B"].width = 20
 
         # фото
-        # TODO найти решение для переменного размера фото
         image_stream = io.BytesIO(violation["picture"])
         pil_image = PILImage.open(image_stream)
 
@@ -262,7 +201,6 @@ def create_xlsx(violations: tuple,
 
 def create_report(violations: tuple, image_scale: float = 0.3) -> bytes | None:
     """Создание суммарного отчёта."""
-    # TODO найти решение для включения листа с одним нарушением в суммарный отчёт
     if len(violations) == 1:
         raise InvalidReportParameterError
 
@@ -285,4 +223,128 @@ def create_report(violations: tuple, image_scale: float = 0.3) -> bytes | None:
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
+    return output.getvalue()
+
+
+def create_typst_report(created_by: UserModel,
+                        violations: tuple) -> Path:
+    """Создание отчёта pdf с помощью typst."""
+    typst_document = generate_typst(violations, created_by=created_by)
+
+    report_typ_file = BASEDIR / Path("typst") / Path("report.typ")
+    with report_typ_file.open("w", encoding="utf-8") as typ_file:
+        typ_file.write(typst_document)
+
+    output_pdf = BASEDIR / Path("violations") / report_typ_file.with_suffix(".pdf").name
+
+    if platform.system() == "Windows":
+        typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
+                         r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                         r"\typst-x86_64-pc-windows-msvc\typst.exe")
+    else:
+        typst_command = "typst"
+
+    cmd = [typst_command, "compile", report_typ_file, output_pdf]
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    if result.returncode != 0:
+        log.error(f"Ошибка компиляции:\n{result.stderr}")
+        msg = "Не удалось скомпилировать Typst файл"
+        raise RuntimeError(msg)
+
+    log.success(f"PDF успешно создан: {output_pdf}")
+    return output_pdf
+
+
+def create_static_report(violations: tuple) -> bytes:
+    """Создание статистического отчёта xlsx."""
+    # TODO добавить период выгрузки для violations
+    wb = Workbook()
+    wb = remove_default_sheet(wb)
+
+    # полный отчёт
+    wb.create_sheet(title="Полный отчёт")
+    full_report_ws = wb["Полный отчёт"]
+    # шапка
+    full_report_ws.append([
+        "Номер нарушения",  # ["id"]
+        "Место нарушения",  # ["area"]["name"]
+        "Описание нарушения",  # ["description]
+        "Ответственный",  # ["area"]["responsible_user"] if responsible_user_id else ["area"]["responsible_text"]
+        "Категория нарушения",  # ["category"]
+        "Мероприятия",  # ["actions_needed"]
+        "Статус",  # ["status"]
+        "Дата обнаружения",  # ["created_at"]
+        "Дата закрытия",  # ["updated_at"] if status == <ViolationStatus.COMPLETED: 'завершено'> else ""
+        "Обнаружено работником",  # ["detector"]["first_name"] + ["detector"]["user_role"]
+    ])
+    # данные полного отчёта
+    for violation in violations:
+        full_report_ws.append([
+            violation["id"],
+            violation["area"]["name"],
+            violation.get("description", ""),
+            violation["area"]["responsible_user"]["first_name"] if violation["area"]["responsible_user_id"] else
+            violation["area"][
+                "responsible_text"],
+            violation["category"],
+            violation["actions_needed"],
+            violation["status"].value,
+            violation["created_at"].strftime("%d.%m.%Y %H:%M:%S"),
+            violation["updated_at"].strftime("%d.%m.%Y %H:%M:%S") if violation["status"].name == "CORRECTED" else "",
+            f"ФИО: {violation["detector"]["first_name"]} Роль:{violation["detector"]["user_role"]}",
+        ])
+
+    # отчёт по каждому месту нарушения
+    area_report_data = {}
+    # TODO tests
+    # vis = [{k: v for k, v in violation.items() if k != "picture"} for violation in violations]
+    # pprint(vis)
+
+    for violation in violations:
+        area_name = violation["area"]["name"]
+        responsible = violation["area"]["responsible_user"]["first_name"] if violation["area"]["responsible_user_id"] \
+            else violation["area"]["responsible_text"]
+        status = violation["status"].value
+
+        if area_name not in area_report_data:
+            area_report_data[area_name] = {"violations": defaultdict(int)}
+
+        area_report_data[area_name]["violations"][status] += 1
+        area_report_data[area_name]["responsible"] = responsible
+
+    wb.create_sheet(title="Места нарушения")
+    area_report_ws = wb["Места нарушения"]
+
+    # шапка
+    area_report_ws.append([
+        "Место нарушения",
+        "Ответственный",
+        ViolationStatus.ACTIVE.value,
+        ViolationStatus.REVIEW.value,
+        ViolationStatus.CORRECTED.value,
+        ViolationStatus.REJECTED.value,
+    ])
+    # данные полного отчёта
+    for area, violation_statuses in area_report_data.items():
+        area_report_ws.append([
+            area,
+            violation_statuses["responsible"],
+            violation_statuses["violations"].get(ViolationStatus.ACTIVE.value, 0),
+            violation_statuses["violations"].get(ViolationStatus.REVIEW.value, 0),
+            violation_statuses["violations"].get(ViolationStatus.CORRECTED.value, 0),
+            violation_statuses["violations"].get(ViolationStatus.REJECTED.value, 0),
+        ])
+
+    # результат
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
     return output.getvalue()

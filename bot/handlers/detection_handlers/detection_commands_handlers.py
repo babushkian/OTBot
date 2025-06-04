@@ -6,7 +6,6 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole, ViolationStatus
-from bot.config import REPORTS_DIR
 from bot.constants import TG_GROUP_ID, ACTIONS_NEEDED
 from bot.db.models import UserModel, ViolationModel
 from logger_config import log
@@ -15,7 +14,7 @@ from bot.repositories.user_repo import UserRepository
 from bot.keyboards.common_keyboards import generate_cancel_button, generate_yes_no_keyboard
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
-from bot.handlers.reports_handlers.create_reports import create_xlsx
+from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import (
     AreaSelectFactory,
@@ -71,12 +70,12 @@ async def handle_get_violation_photo(message: types.Message,
 
 
 @router.callback_query(AreaSelectFactory.filter(), DetectionStates.enter_area)
-async def handle_set_first_layer_violation_area(callback: types.CallbackQuery,
-                                                state: FSMContext,
-                                                callback_data: AreaSelectFactory,
-                                                group_user: UserModel,
-                                                ) -> None:
-    """Обрабатывает выбор первого уровня вложенности места нарушения."""
+async def handle_set_area_and_first_layer_violation_category(callback: types.CallbackQuery,
+                                                             state: FSMContext,
+                                                             callback_data: AreaSelectFactory,
+                                                             group_user: UserModel,
+                                                             ) -> None:
+    """Обрабатывает выбор места нарушения и отдаёт выбор первого уровня категории нарушения."""
     await state.update_data(area_id=callback_data.id)
 
     first_violation_keyboard = await violation_categories_first_kb()
@@ -262,7 +261,7 @@ async def handle_violation_review(callback: types.CallbackQuery,
                                   state: FSMContext,
                                   session: AsyncSession,
                                   group_user: UserModel) -> None:
-    """Обработчик для просмотра нарушения."""
+    """Обработчик для просмотра нарушения при одобрении."""
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
     violation = await violation_repo.get_violation_by_id(callback_data.id)
@@ -271,14 +270,12 @@ async def handle_violation_review(callback: types.CallbackQuery,
                             area=violation["area"]["name"])
 
     # отправка акта нарушения для review
-    # pdf_file = BufferedInputFile(create_pdf(violation=violation, image_scale=0.3), filename="violation.pdf")
-    # TODO конвертация xlsx в jpg или pdf перед отправкой
-    xlsx_file = BufferedInputFile(create_xlsx(violations=(violation,), image_scale=0.3),
-                                  filename=f"report_{violation['id']}.xlsx")
-    user_tg = callback.from_user.id
+    pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
     caption = f"Место: {violation['area']['name']}\nОписание: {violation['description']}"
-    # await callback.message.bot.send_document(chat_id=user_tg, document=pdf_file, caption=caption)
-    await callback.message.bot.send_document(chat_id=user_tg, document=xlsx_file, caption=caption)
+    document = FSInputFile(pdf_file)
+    user_tg = callback.from_user.id
+
+    await callback.message.bot.send_document(chat_id=user_tg, document=document, caption=caption)
 
     actions_to_kb = ({"action": "activate", "name": "Утвердить"},
                      {"action": "reject", "name": "Отклонить"})
@@ -289,7 +286,7 @@ async def handle_violation_review(callback: types.CallbackQuery,
     await callback.message.answer("Выберите действие:", reply_markup=action_kb)
     await state.set_state(ViolationStates.review)
     await callback.answer("Выбрано действие.")
-    log.debug("Пользователь {user} запустил процесс рассмотрения замечания.", user=group_user.first_name)
+    log.debug("Пользователь {user} запустил процесс рассмотрения нарушения.", user=group_user.first_name)
 
 
 @router.callback_query(ViolationsActionFactory.filter(F.action == "activate"), ViolationStates.review)
@@ -320,34 +317,33 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
                                            text=f"Нарушение №{data["id"]} одобрено администратором.")
 
             # отправка в группу
-            # pdf_file = REPORTS_DIR / f"report_{data['id']}.pdf"
-            # TODO конвертация xlsx в jpg или pdf перед отправкой
-
             jpeg_file = violation_data["picture"]
-            xlsx_file = REPORTS_DIR / f"report_{data['id']}.xlsx"
             caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
-            caption_xlsx = f"Детали нарушения №{data['id']}"
+            caption_pdf = f"Детали нарушения №{data['id']}"
+
+            pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
+            document = FSInputFile(pdf_file)
+
             try:
                 await message.bot.send_document(chat_id=TG_GROUP_ID,
-                                                # document=FSInputFile(pdf_file),
                                                 document=BufferedInputFile(jpeg_file,
                                                                            filename=f"Нарушение №{data['id']}.jpg"),
                                                 caption=caption_jpeg)
                 await message.bot.send_document(chat_id=TG_GROUP_ID,
-                                                # document=FSInputFile(pdf_file),
-                                                document=FSInputFile(xlsx_file),
-                                                caption=caption_xlsx)
+                                                document=document,
+                                                caption=caption_pdf)
                 log.debug("Violation report {report} sent to group.", report=data["id"])
             except Exception as e:
                 log.error("Error sending violation report to group.")
                 log.exception(e)
 
-            log.success("Violation data {violation} updated", violation=data["description"])
+            log.success("Violation data {violation} updated to {new_status}", violation=data["id"],
+                        new_status=ViolationStatus.ACTIVE.name)
             await message.answer("Нарушение отправлено группу.")
 
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
-            log.error("Error updating violation data {violation}", violation=data["description"])
+            log.error("Error updating violation data {violation}", violation=data["id"])
 
         await state.clear()
 
