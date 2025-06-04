@@ -10,4 +10,5 @@ statistics.txt
 *.db
 logs
 static
-violations
+report.pdf
+*.jpg

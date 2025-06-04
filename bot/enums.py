@@ -5,9 +5,9 @@ from enum import StrEnum
 class UserRole(StrEnum):
     """Роли пользователей."""
 
-    OTPB = "РаботникОТПБ"
+    OTPB = "РаботникООТПБиООС"
     RESPONSIBLE = "Ответственный"
-    ADMIN = "Администратор"
+    ADMIN = "РуководительООТПБиООС"
     USER = "Наблюдатель"
 
 

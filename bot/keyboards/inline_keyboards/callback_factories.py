@@ -85,3 +85,10 @@ class ReportTypeFactory(CallbackData, prefix="reptype"):
     """Фабрика для callback_data для выбора типа отчета."""
 
     type: str
+
+
+class ReportPeriodFactory(CallbackData, prefix="repper"):
+    """Фабрика для callback_data для выбора интервала полного отчета."""
+
+    per: str
+

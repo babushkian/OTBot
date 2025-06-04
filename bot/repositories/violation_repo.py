@@ -1,7 +1,8 @@
 """Репозитории зарегистрированного нарушения."""
 from typing import Any
+from datetime import datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, between
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,11 +42,12 @@ class ViolationRepository:
             log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
 
             violation = result.scalars().first()
+            if not violation:
+                return None
+
             responsible_user = violation.area.responsible_user.to_dict() if violation.area.responsible_user else None
             return (violation.to_dict() |
-                    {"area": violation.area.to_dict()
-                             | {"responsible_user": responsible_user},
-                     }
+                    {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
                     | {"detector": violation.detector.to_dict()})
 
     async def get_all_violations(self) -> [dict, ...]:
@@ -143,12 +145,15 @@ class ViolationRepository:
         else:
             log.success("Violation with id {violation} deleted successfully", violation=violation_id)
 
-    async def get_not_reviewed_violations(self) -> list[dict[str, Any]] | None:
+    async def get_not_reviewed_violations(self) -> tuple[dict, ...] | None:
         """Получение всех непроверенных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
-                                                .where(ViolationModel.status == ViolationStatus.REVIEW)
-                                                .options(joinedload(ViolationModel.area)))
+                                                .options(joinedload(ViolationModel.area)
+                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         joinedload(ViolationModel.detector),
+                                                         )
+                                                .where(ViolationModel.status == ViolationStatus.REVIEW))
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting not reviewed violations")
@@ -160,14 +165,25 @@ class ViolationRepository:
             return None
         else:
             log.success("Not reviewed violations found successfully")
-            return [violation.to_dict() |
-                    {"area": violation.area.to_dict()}
-                    for violation in result.scalars().all()]
+            violations = tuple(result.scalars().all())
+            return tuple([
+                (violation.to_dict() |
+                 {
+                     "area": violation.area.to_dict() | {
+                         "responsible_user": violation.area.responsible_user.to_dict()
+                         if violation.area.responsible_user else None},
+                 }
+                 | {"detector": violation.detector.to_dict()}) for violation in violations
+            ])
 
-    async def get_active_violations(self) -> list[dict[str, Any]] | None:
+    async def get_active_violations(self) -> tuple[dict, ...] | None:
         """Получение всех активных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
+                                                .options(joinedload(ViolationModel.area)
+                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         joinedload(ViolationModel.detector),
+                                                         )
                                                 .where(ViolationModel.status == ViolationStatus.ACTIVE))
         except SQLAlchemyError as e:
             await self.session.rollback()
@@ -180,4 +196,67 @@ class ViolationRepository:
             return None
         else:
             log.success("Active violations found successfully")
-            return [user.to_dict() for user in result.scalars().all()]
+            violations = tuple(result.scalars().all())
+            return tuple([
+                (violation.to_dict() |
+                 {
+                     "area": violation.area.to_dict() | {
+                         "responsible_user": violation.area.responsible_user.to_dict()
+                         if violation.area.responsible_user else None},
+                 }
+                 | {"detector": violation.detector.to_dict()}) for violation in violations
+            ])
+
+    async def get_all_violations_by_date(self,
+                                         start_date: datetime,
+                                         end_date: datetime) -> [dict, ...]:
+        """Получение нарешений в периоде дет."""
+        try:
+            result = await self.session.execute(select(ViolationModel).order_by(ViolationModel.id)
+                                                .options(joinedload(ViolationModel.area)
+                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         joinedload(ViolationModel.detector),
+                                                         )
+                                                .where(between(ViolationModel.created_at, start_date, end_date)),
+                                                )
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            log.error("SQLAlchemyError getting violations")
+            log.exception(e)
+            return None
+        except Exception as e:
+            log.error("Error getting violations")
+            log.exception(e)
+            return None
+        else:
+            violations = tuple(result.scalars().all())
+            log.success("{col} violations found successfully", col=len(violations))
+
+            return tuple([
+                (violation.to_dict() |
+                 {
+                     "area": violation.area.to_dict() | {
+                         "responsible_user": violation.area.responsible_user.to_dict()
+                         if violation.area.responsible_user_id else None},
+                 }
+                 | {"detector": violation.detector.to_dict()}) for violation in violations
+            ])
+
+    async def get_active_violations_id_description(self) -> tuple[dict, ...] | None:
+        """Получение всех активных нарушений."""
+        try:
+            result = await self.session.execute(select(ViolationModel.id, ViolationModel.description)
+                                                .where(ViolationModel.status == ViolationStatus.ACTIVE))
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            log.error("SQLAlchemyError getting active violations")
+            log.exception(e)
+            return None
+        except Exception as e:
+            log.error("Error getting active violations")
+            log.exception(e)
+            return None
+        else:
+            log.success("Active violations found successfully")
+            violations = tuple(result.scalars().all())
+            return tuple([violation.to_dict() for violation in violations])

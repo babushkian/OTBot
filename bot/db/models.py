@@ -70,26 +70,3 @@ class AreaModel(Base):
         """Строковое представление."""
         return self.__class__.__name__ + f"({self.name})"
 
-# print(AreaModel.__tablename__)
-
-
-# class ActionModel(Base):
-#     """Модель мероприятий по устранению нарушений."""
-#     name: Mapped[str] = mapped_column(String(100), unique=True)
-#     description: Mapped[str]
-
-# image: Mapped[list["Image"]] = relationship("Image", back_populates="user")
-
-
-# class Image(Base):
-#     """Модель изображения."""
-#
-#     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", name="fk_image_user_id"))
-#     user: Mapped["UserModel"] = relationship("UserModel", back_populates="image")
-#
-#     name: Mapped[str] = mapped_column(String(100))
-#     data: Mapped[bytes] = mapped_column(LargeBinary)
-#
-#     def __str__(self) -> str:
-#         """Строковое представление."""
-#         return self.__class__.__name__ + f"({self.name}"

@@ -1,6 +1,7 @@
 """Константы бота."""
 import time
 
+from pathlib import Path
 from datetime import timezone, timedelta
 
 from bot.config import BASEDIR
@@ -19,9 +20,11 @@ admin_commands_list = (
     ("delarea", "Удалить место нарушения"),
     ("check", "Проверка нарушения"),
     ("report", "Запрос отчётов"),
+    ("vclose", "Закрытие нарушений"),
 )
 otpb_commands_list = (
     ("detect", "Зафиксировать нарушение"),
+    ("vclose", "Закрытие нарушений"),
 )
 bot_kwarg_names = ("command", "description")
 
@@ -40,7 +43,6 @@ ACTIONS_NEEDED = (
     {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=7, tz=tz)},
     {"action": "Усилить контроль за выполнением работ", "fix_time": get_fix_date(days=14, tz=tz)},
     {"action": "Устранить", "fix_time": "Немедленно"},
-
 )
 
 # id группы в телеграмм
@@ -51,6 +53,8 @@ TG_GROUP_LINK = "free_orders"
 SUPER_USERS_TG_ID = (1238658905, 1881884886)
 
 VIOLATION_CATEGORY_JSON_FILE = BASEDIR / "bot" / "keyboards" / "category_buttons.json"
+REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")
+
 
 # текстовые поля для отчётов
 COPY_TO = ("Копия:", "главному инженеру ЗАО 'ОмЗиТ'", "Новикову А.Н.", "от ООТ,ПБ и ООС")

@@ -20,8 +20,10 @@ async def report_request(message: types.Message, access_denied: bool,
 
     reports_to_kb = (
         {"type": "by_id", "name": "По номеру нарушения"},
-        {"type": "sum", "name": "Полный перечень нарушений"},
+        {"type": "sum", "name": "Полный отчёт нарушений за период"},
         {"type": "active", "name": "Действующие нарушения"},
+        {"type": "review", "name": "На проверке"},
+        {"type": "stat", "name": "Статистика нарушений"},
     )
     reports_kb = await create_keyboard(items=reports_to_kb,
                                        text_key="name",
@@ -29,28 +31,7 @@ async def report_request(message: types.Message, access_denied: bool,
 
     await message.answer("Выберите тип отчёта:", reply_markup=reports_kb)
 
-
-# @router.message(Command("tst"))
-# async def tst_report_request(
-#         message: types.Message,
-#         access_denied: bool,
-#         group_user: UserModel | None,
-#         session: AsyncSession,
-# ) -> None:
-#     """Запуск процесса обнаружения нарушений."""
-#     if access_denied and group_user.user_role != UserRole.OTPB:
-#         return
-#
-#     await message.answer("Отчёт сгенерирован.")
-#
-#     violation_repo = ViolationRepository(session)
-#     # violation = await violation_repo.get_violation_by_id(violation_id=1)
-#     violations = await violation_repo.get_all_violations()
-#     # create_xlsx((violation,))
-#     create_report(violations)
-
 # TODO
-# Команда получения суммарного отчёта xlsx по дате с с разными статусами в разных листах и листом статистики
 # Команда получения активных нарушений
 # Команда закрытия нарушений
 # REFACTORING
