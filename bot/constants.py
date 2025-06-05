@@ -1,5 +1,4 @@
 """Константы бота."""
-import time
 
 from pathlib import Path
 from datetime import timezone, timedelta
@@ -31,18 +30,18 @@ bot_kwarg_names = ("command", "description")
 common_commands = [dict(zip(bot_kwarg_names, common, strict=False)) for common in common_commands_list]
 otpb_commands = ([dict(zip(bot_kwarg_names, otpb, strict=False)) for otpb in otpb_commands_list] + common_commands)
 admin_commands = ([dict(zip(bot_kwarg_names, admin, strict=False)) for admin in admin_commands_list] + otpb_commands)
-LOCAL_TIMEZONE = -time.timezone / 3600
+LOCAL_TIMEZONE = 6
 tz = timezone(timedelta(hours=LOCAL_TIMEZONE))
 
 # мероприятия для нарушений
 ACTIONS_NEEDED = (
     {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1, tz=tz)},
-    {"action": "Оградить опасную зону", "fix_time": get_fix_date(days=2, tz=tz)},
-    {"action": "Отстранить от работы", "fix_time": get_fix_date(days=3, tz=tz)},
-    {"action": "Превести в соответствие", "fix_time": get_fix_date(days=5, tz=tz)},
-    {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=7, tz=tz)},
-    {"action": "Усилить контроль за выполнением работ", "fix_time": get_fix_date(days=14, tz=tz)},
-    {"action": "Устранить", "fix_time": "Немедленно"},
+    {"action": "Оградить опасную зону", "fix_time": "Немедленно"},
+    {"action": "Отстранить от работы", "fix_time": "Немедленно"},
+    {"action": "Превести в соответствие", "fix_time": get_fix_date(days=3, tz=tz)},
+    {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=3, tz=tz)},
+    {"action": "Усилить контроль за выполнением работ", "fix_time": "Немедленно"},
+    {"action": "Устранить", "fix_time": get_fix_date(days=3, tz=tz)},
 )
 
 # id группы в телеграмм

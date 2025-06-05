@@ -35,7 +35,10 @@ CMD ["python", "main.py"]
     # docker build -t otbot .
 
 # run container:
-    # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
+    # для обычного запуска
+        # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
+    # для просмотра папок отчётов:
+        # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" -v "$(pwd)/typst:/app/typst" -v "$(pwd)/violations:/app/violations" --name otbot-ins otbot
 
 # other commands:
     # docker ps -a  # Увидеть все контейнеры

@@ -27,6 +27,9 @@ async def violation_close(message: types.Message, access_denied: bool,
     violation_repo = ViolationRepository(session)
     violations = await violation_repo.get_active_violations()
 
+    if not violations:
+        await message.answer("Нет активных нарушений.")
+
     violations_to_kb = tuple([{"id": violation["id"],
                                "btn_name": f"Нарушение №{violation["id"]}-{violation["area"]["name"]}"}
                               for violation in violations])

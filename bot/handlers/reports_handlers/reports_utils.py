@@ -27,7 +27,7 @@ def generate_typst(violation_json_data: tuple, created_by: UserModel) -> str:
     """Генерация typst-кода.."""
     output_dir = BASEDIR / Path("typst") / Path("violation_images")
     # ответственные
-    responsible_mans = [line["area"].get("responsible_user") if line["area"].get("responsible_user")
+    responsible_mans = [line["area"].get("responsible_user")["first_name"] if line["area"].get("responsible_user")
                         else line["area"]["responsible_text"] for line in
                         violation_json_data]
     responsible_str = ", ".join(set(responsible_mans))
