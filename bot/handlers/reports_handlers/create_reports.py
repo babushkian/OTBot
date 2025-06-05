@@ -1,229 +1,21 @@
 """Создание отчётов нарушений."""
 import io
-import datetime
 import platform
 import subprocess
 
-from copy import copy
 from pathlib import Path
 from collections import defaultdict
 
-from PIL import Image as PILImage
 from openpyxl import Workbook
-from openpyxl.styles import Side, Border, Alignment
-from openpyxl.drawing.image import Image as OpenpyxlImage
-from openpyxl.worksheet.worksheet import Worksheet
 
 from bot.enums import ViolationStatus
-from bot.config import BASEDIR, REPORTS_DIR
-from bot.constants import COPY_TO, LOCAL_TIMEZONE
+from bot.config import BASEDIR
 from bot.db.models import UserModel
 from logger_config import log
-from bot.bot_exceptions import InvalidReportParameterError
 from bot.handlers.reports_handlers.reports_utils import (
     generate_typst,
-    print_formating,
     remove_default_sheet,
-    copy_sheet_with_images,
 )
-
-# TODO remove deprecated functions
-
-def create_xlsx(violations: tuple,
-                image_scale: float = 0.3,
-                ) -> Worksheet | bytes:
-    """Отчёт предписания нарушений в формате XLSX."""
-    wb = Workbook()
-    # удаление листа по умолчанию
-    wb = remove_default_sheet(wb)
-    violation_numbers = " ,".join([str(violation["id"]) for violation in violations])
-    list_title = f"Предписание №{violation_numbers}"
-    ws = wb.create_sheet(title=list_title)
-    ws.title = list_title
-
-    # ответственному
-    row = 1
-    ws[f"F{row}"] = "Ответственному:"
-    row += 1
-    responsible_mans = []
-    for violation in violations:
-        if violation["area"].get("responsible"):
-            responsible_mans.append(violation["area"]["responsible"])
-        else:
-            responsible_mans.append(violation["area"]["responsible_text"])
-    for responsible in set(responsible_mans):
-        ws[f"F{row}"] = responsible
-        row += 1
-
-    # копия
-    for line in COPY_TO:
-        ws[f"F{row}"] = line
-        row += 1
-
-    # заголовок
-    row += 1
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = list_title
-
-    # дата создания предписания
-    row += 1
-    local_tz = datetime.timezone(datetime.timedelta(hours=LOCAL_TIMEZONE))
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = f"Дата предписания: {datetime.datetime.now(tz=local_tz).strftime("%d.%m.%Y")}"
-    row += 1
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = "Устранить следующие нарушения:"
-
-    # пропуск строк для дальнейшего заполнения суммарных отчётов
-    ws.append([])
-
-    row += 1
-    last_header_row = copy(row)
-    ws.append([])
-    row += 1
-
-    # шапка таблицы
-    headers = [
-        "№ нарушения",
-        "Дата/время",
-        "Фото",
-        "Выявленные нарушения требований охраны труда",
-        "Сроки устранения, мероприятия",
-        "Отметка об устранении",
-    ]
-    ws.append(headers)
-
-    # заполняем таблицу
-    for violation in violations:
-        row += 1
-        # номер нарушения
-        ws[f"A{row}"] = violation["id"]
-        ws.column_dimensions["A"].width = 10
-
-        # дата/время
-        violation_date: datetime.datetime = violation["created_at"] + datetime.timedelta(hours=LOCAL_TIMEZONE)
-        ws[f"B{row}"] = violation_date.strftime("%d.%m.%Y %H:%M:%S")
-        ws.column_dimensions["B"].width = 20
-
-        # фото
-        image_stream = io.BytesIO(violation["picture"])
-        pil_image = PILImage.open(image_stream)
-
-        original_width, original_height = pil_image.size
-        scaled_width = int(original_width * image_scale)
-        scaled_height = int(original_height * image_scale)
-        pil_image = pil_image.resize((scaled_width, scaled_height))
-
-        temp_image_stream = io.BytesIO()
-        pil_image.save(temp_image_stream, format="JPEG")
-        temp_image_stream.seek(0)
-
-        img = OpenpyxlImage(temp_image_stream)
-        img.anchor = f"C{row}"
-        ws.add_image(img)
-
-        padding = 10
-        ws.row_dimensions[row].height = scaled_height + padding
-        ws.column_dimensions["C"].width = scaled_width / 7 + padding / 7
-
-        # основное содержимое нарушения
-        responsible = (  # Ответственный
-            violation["area"]["responsible_text"]
-            if not violation["area"]["responsible_user"]
-            else violation["area"]["responsible_user"].get("first_name", "")
-        )
-        main_content = (f"Описание нарушения:\n "
-                        f"{violation.get('description', 'Без описания.')}\n\n"
-                        f"Нарушение категории:\n "
-                        f"{violation['category']}\n\n"
-                        f"Место нарушения:\n"
-                        f"{violation['area']['name']}\n"
-                        f"Ответственный:\n"
-                        f"{responsible}\n\n"
-                        f"Нарушение зафиксировал:\n"
-                        f"{violation["detector"]["user_role"]} {violation["detector"]["first_name"]}")
-        ws[f"D{row}"] = main_content
-        ws.column_dimensions["D"].width = 40
-
-        # мероприятия
-        ws[f"E{row}"] = violation["actions_needed"]
-        ws.column_dimensions["E"].width = 30
-        ws.column_dimensions["F"].width = 20
-
-    # форматирование таблицы
-    for table_row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for cell in table_row:
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
-            if cell.row > last_header_row:
-                cell.border = Border(left=Side(style="thin"),
-                                     right=Side(style="thin"),
-                                     top=Side(style="thin"),
-                                     bottom=Side(style="thin"))
-
-    # футер с подписями
-    row += 2
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = ("О выполнении настоящего предписания прошу сообщить по каждому пункту согласно сроку "
-                     "устранения письменно.")
-
-    row += 2
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = "Предписание выдал:"
-
-    row += 2
-    ws.append([])
-    ws.append(["дата:", "", "подпись", "Ф.И.О.", "", "Должность"])
-
-    row += 2
-    ws.merge_cells(f"A{row}:F{row}")
-    ws[f"A{row}"] = "Контроль устранения нарушений провел:"
-
-    ws.append([])
-    ws.append(["дата:", "", "подпись", "Ф.И.О.", "", "Должность"])
-    print_formating(ws)
-
-    # отчёт об одном нарушении
-    if len(violations) == 1:
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        result = output.getvalue()
-
-        # Копия на диск
-        report_file: Path = REPORTS_DIR / f"report_{violations[0]['id']}.xlsx"
-        with report_file.open("wb") as xlsx_file:
-            xlsx_file.write(result)
-
-        return result
-
-    return ws
-
-
-def create_report(violations: tuple, image_scale: float = 0.3) -> bytes | None:
-    """Создание суммарного отчёта."""
-    if len(violations) == 1:
-        raise InvalidReportParameterError
-
-    wb = Workbook()
-    wb = remove_default_sheet(wb)
-
-    wb.create_sheet(title="Статистика")
-
-    violation_areas = {violation["area"]["name"] for violation in violations}
-
-    for area in violation_areas:
-        area_violations = tuple([violation for violation in violations if violation["area"]["name"] == area])
-
-        if len(area_violations) > 1:
-            copy_sheet_with_images(target_wb=wb,
-                                   source_ws=create_xlsx(area_violations,
-                                                         image_scale),
-                                   ws_title=f"{area}"[:30])
-
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output.getvalue()
 
 
 def create_typst_report(created_by: UserModel,
@@ -241,10 +33,11 @@ def create_typst_report(created_by: UserModel,
         typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
                          r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
                          r"\typst-x86_64-pc-windows-msvc\typst.exe")
-    else:
-        typst_command = "typst"
 
-    cmd = [typst_command, "compile", report_typ_file, output_pdf]
+        cmd = [typst_command, "compile", report_typ_file, output_pdf]
+
+    else:
+        cmd = ["typst", "compile", report_typ_file, output_pdf]
 
     result = subprocess.run(
         cmd,
@@ -264,7 +57,7 @@ def create_typst_report(created_by: UserModel,
 
 def create_static_report(violations: tuple) -> bytes:
     """Создание статистического отчёта xlsx."""
-    # TODO добавить период выгрузки для violations
+    # TODO добавить период выгрузки для violations после получения достаточного объема данных
     wb = Workbook()
     wb = remove_default_sheet(wb)
 
@@ -303,7 +96,7 @@ def create_static_report(violations: tuple) -> bytes:
 
     # отчёт по каждому месту нарушения
     area_report_data = {}
-    # TODO tests
+    # TODO tests использовать для дальнейшего добавления видов отчётов
     # vis = [{k: v for k, v in violation.items() if k != "picture"} for violation in violations]
     # pprint(vis)
 

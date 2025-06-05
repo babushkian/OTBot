@@ -30,12 +30,3 @@ async def report_request(message: types.Message, access_denied: bool,
                                        callback_factory=ReportTypeFactory)
 
     await message.answer("Выберите тип отчёта:", reply_markup=reports_kb)
-
-# TODO
-# Команда получения активных нарушений
-# Команда закрытия нарушений
-# REFACTORING
-# tests
-
-# Обновление статуса любого нарушения ?
-# Обновление любого поля любого нарушения ?

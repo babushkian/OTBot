@@ -67,7 +67,6 @@ async def disapprove_command(message: types.Message, session: AsyncSession, grou
     await message.reply("Выберите пользователя для отмены одобрения:", reply_markup=users_to_approve_kb)
 
 
-# TODO добавить проверку на администратора group_user.role == UserRole.ADMIN для доступа пользователю администратору
 @router.message(Command("delapprove"))
 async def delete_command(message: types.Message,
                          session: AsyncSession,
