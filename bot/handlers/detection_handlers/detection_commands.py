@@ -43,6 +43,10 @@ async def check_violation(message: types.Message,
     violation_repo = ViolationRepository(session)
     violations = await violation_repo.get_not_reviewed_violations()
 
+    if not violations:
+        await message.reply("Нет нарушений для проверки.")
+        return
+
     violations_to_kb = tuple([{"id": violation["id"],
                                "btn_name": f"Нарушение №{violation["id"]}-{violation["area"]["name"]}"}
                               for violation in violations])
