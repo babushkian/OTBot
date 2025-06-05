@@ -21,7 +21,6 @@ from bot.keyboards.inline_keyboards.callback_factories import ReportTypeFactory,
 router = Router(name=__name__)
 
 
-# TODO REFACTOR LOGS
 @router.callback_query(ReportTypeFactory.filter())
 async def handle_report_type_select(callback: types.CallbackQuery,
                                     callback_data: ReportTypeFactory,

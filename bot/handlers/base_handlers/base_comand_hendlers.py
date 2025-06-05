@@ -60,7 +60,7 @@ async def handle_get_xlsx(message: types.Message) -> None:
             else:
                 log.success("Categories buttons updated from {file_name}.", file_name=file_name)
                 await message.reply("Значения кнопок категорий нарушений обновлены успешно.")
-        # TODO case для других сгенерив обработки xlsx файлов
+        # TODO case для других сгенерив обработки xlsx файлов 1. # настройка отчётов
         case _:
             msg_text = """При отправке файла xlsx:
              - для обновления категорий нарушений: файл должен иметь имя 'категории нарушений.xlsx'.\n"""

@@ -2,13 +2,28 @@ FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1
 
+# Устанавливаем необходимые системные зависимости
+RUN apt-get update && \
+    apt-get install -y \
+        wget \
+        ca-certificates \
+        xz-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем uv
 RUN pip install uv
+
+# Устанавливаем конкретную версию Typst (v0.13.1)
+RUN wget https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz && \
+    tar -xJf typst-x86_64-unknown-linux-musl.tar.xz && \
+    mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/ && \
+    rm -rf typst-x86_64-unknown-linux-musl.tar.xz typst-x86_64-unknown-linux-musl
 
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv export --no-dev  > requirements.txt && \
+RUN uv export --no-dev > requirements.txt && \
     uv pip install --system -r requirements.txt
 
 COPY . .
@@ -20,7 +35,7 @@ CMD ["python", "main.py"]
     # docker build -t otbot .
 
 # run container:
-    # docker run -d -v "$(pwd)/bot.db:/app/bot.db" -v "$(pwd)/violations:/app/violations" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
+    # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
 
 # other commands:
     # docker ps -a  # Увидеть все контейнеры

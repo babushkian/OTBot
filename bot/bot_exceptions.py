@@ -5,14 +5,6 @@ class EmptyDatabaseSessionError(Exception):
     """Исключение, при отсутствии сессии подключения к БД."""
 
 
-class InvalidReportParameterError(Exception):
-    """Исключения неправильных параметров отчета."""
-
-    def __init__(self) -> None:
-        """Инициализация текста исключения."""
-        super().__init__("Функция не может быть вызвана с пустыми параметрами.")
-
-
 class EmptyValueInputError(ValueError):
     """Исключение для ввода пустого значения."""
 

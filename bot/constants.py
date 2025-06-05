@@ -54,7 +54,3 @@ SUPER_USERS_TG_ID = (1238658905, 1881884886)
 
 VIOLATION_CATEGORY_JSON_FILE = BASEDIR / "bot" / "keyboards" / "category_buttons.json"
 REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")
-
-
-# текстовые поля для отчётов
-COPY_TO = ("Копия:", "главному инженеру ЗАО 'ОмЗиТ'", "Новикову А.Н.", "от ООТ,ПБ и ООС")
