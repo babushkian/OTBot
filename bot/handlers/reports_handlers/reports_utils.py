@@ -118,9 +118,13 @@ def generate_typst(violation_json_data: tuple, created_by: UserModel) -> str:
             Нарушение зафиксировал: {violation['detector']['first_name']}"""
 
         # заполнение таблицы
+        localized_datetime = violation["created_at"].astimezone(tz=tz).strftime("%d.%m.%Y %H:%M")
+        # Форматируем дату с учетом временной зоны
+        # formatted_date = localized_datetime.strftime('%d.%m.%Y %H:%M %Z%z')
         typst_code += f"""
             [{violation["id"]}],
-            [{violation['created_at'].strftime('%d.%m.%Y %H:%M')}],
+            //[{violation['created_at'].strftime('%d.%m.%Y %H:%M')}],
+            [{localized_datetime}],
             image("{image_path_relative}", width: {report_settings["col_width"]["C"]}),
             [#align(left)[{description}]],
             [#align(left)[{violation['actions_needed']}]],

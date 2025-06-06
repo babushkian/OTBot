@@ -1,4 +1,8 @@
 """Обработчики обнаружения нарушений."""
+import asyncio
+
+from io import BytesIO
+from collections import defaultdict
 
 from aiogram import F, Router, types
 from aiogram.types import FSInputFile, BufferedInputFile, InlineKeyboardMarkup
@@ -16,6 +20,7 @@ from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
 from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
+from bot.handlers.detection_handlers.detection_utils import merge_images
 from bot.keyboards.inline_keyboards.callback_factories import (
     AreaSelectFactory,
     ViolationsFactory,
@@ -31,30 +36,105 @@ from bot.handlers.detection_handlers.detection_keyboards import (
 
 router = Router(name=__name__)
 
-
 # TODO разнести логику ввода и одобрения/отклонения нарушения по разным файлам
+
+
+# словарь медиа группы
+media_groups = defaultdict(list)
+# счётчик для учёта количества фото
+media_group_timers = {}
+
+
+@router.message(DetectionStates.send_photo, F.media_group_id)
+async def handle_media_group(message: types.Message,
+                             state: FSMContext,
+                             group_user: UserModel,
+                             session: AsyncSession) -> None:
+    """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
+    media_group_id = message.media_group_id
+
+    if not message.photo:
+        return
+
+    # каждое изображение
+    file_id = message.photo[-1].file_id
+    file = await message.bot.get_file(file_id)
+    picture = await message.bot.download_file(file.file_path)
+
+    # список всех фото
+    media_groups[media_group_id].append(picture.read())
+
+    # отменяем таймера если есть итерация
+    if media_group_id in media_group_timers:
+        media_group_timers[media_group_id].cancel()
+
+    # Запускаем новый таймер
+    media_group_timers[media_group_id] = asyncio.create_task(
+        process_media_group_after_delay(message, state, group_user, session, media_group_id),
+    )
+
+    # if len(media_groups[media_group_id]) == 3:
+    #     # объединение фото
+    #     merged_photos = await merge_images(media_groups[media_group_id])
+    #     media_groups[media_group_id].clear()
+    #     await handle_get_violation_photo(message, state, group_user, session, merged_photos=merged_photos)
+
+
+async def process_media_group_after_delay(message: types.Message,
+                                          state: FSMContext,
+                                          group_user: UserModel,
+                                          session: AsyncSession,
+                                          media_group_id: str) -> None:
+    """Завершает обработку MediaGroup после задержки."""
+    # пауза для ожидания загрузки всех фото
+    await asyncio.sleep(2)
+
+    if media_group_id not in media_groups or not media_groups[media_group_id]:
+        return
+
+    photos = media_groups.pop(media_group_id)
+
+    # объединённое фото
+    merged_photos = await merge_images(photos, gap=10)
+
+    await handle_get_violation_photo(message, state, group_user, session, merged_photos=merged_photos)
+    # сброс глобальных словарей
+    media_group_timers.clear()
+    media_groups[media_group_id].clear()
 
 
 @router.message(DetectionStates.send_photo)
 async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
-                                     session: AsyncSession) -> None:
+                                     session: AsyncSession,
+                                     merged_photos: BytesIO | None = None) -> None:
     """Обрабатывает получение фото нарушения."""
     if not message.photo:
         await message.answer("Необходимо прикрепить фото нарушения.",
                              reply_markup=generate_cancel_button())
         return
 
-    file_id = message.photo[-1].file_id
-    file = await message.bot.get_file(file_id)
     description = message.caption or "Без описания"
-    picture = await message.bot.download_file(file.file_path)
 
-    await state.update_data(picture=picture.read(),
-                            description=description,
-                            detector_id=group_user.id,
-                            status=ViolationStatus.REVIEW)
+    if merged_photos:
+        # несколько объединённых фото
+        await state.update_data(picture=merged_photos.read(),
+                                description=description,
+                                detector_id=group_user.id,
+                                status=ViolationStatus.REVIEW)
+
+    else:
+        # одно фото
+        file_id = message.photo[-1].file_id
+        file = await message.bot.get_file(file_id)
+
+        picture = await message.bot.download_file(file.file_path)
+
+        await state.update_data(picture=picture.read(),
+                                description=description,
+                                detector_id=group_user.id,
+                                status=ViolationStatus.REVIEW)
 
     area_repo = AreaRepository(session)
     areas = await area_repo.get_all_areas()
@@ -67,6 +147,59 @@ async def handle_get_violation_photo(message: types.Message,
     await message.reply("Выберите место нарушения:", reply_markup=areas_keyboard)
     log.debug(f"User {group_user.first_name} sent photo for detection.")
     await state.set_state(DetectionStates.enter_area)
+    media_groups.clear()
+
+    # # несколько фото
+    # if message.media_group_id:
+    #
+    #     photo = message.photo[-1]
+    #     file = await message.bot.get_file(photo.file_id)
+    #     photo_bytes = await message.bot.download_file(file.file_path)
+    #     photo_data = photo_bytes.read()
+    #     media_group_id = message.media_group_id
+    #     # Добавляем фото во временное хранилище
+    #     if media_group_id not in temp_media_groups:
+    #         temp_media_groups[media_group_id] = []
+    #     temp_media_groups[media_group_id].append(photo_data)
+    #
+    #     # Ждём 1 секунду, чтобы получить все фото из альбома
+    #     # await asyncio.sleep(1)
+    #
+    #     # Проверяем, все ли фото альбома получены
+    #     current_group = temp_media_groups.get(media_group_id, [])
+    #     # if len(current_group) < 1:
+    #     #     return
+    #     # Если это альбом (2+ фото)
+    #     if 2 <= len(current_group) <= 4:
+    #         merged_image = await merge_images(current_group)
+    #         await state.update_data(
+    #             picture=merged_image.read(),
+    #             description=description,
+    #             detector_id=group_user.id,
+    #             status=ViolationStatus.REVIEW,
+    #         )
+    #         await message.answer(f"Склеено {len(current_group)} фото!")
+    #         # del temp_media_groups[media_group_id]  # Очищаем хранилище
+    #
+    #
+    #
+    #         area_repo = AreaRepository(session)
+    #         areas = await area_repo.get_all_areas()
+    #
+    #         areas_to_kb = [{"area_name": area.name, "id": area.id} for area in areas] if areas else []
+    #
+    #         areas_keyboard = await create_keyboard(items=tuple(areas_to_kb), text_key="area_name",
+    #                                                callback_factory=AreaSelectFactory)
+    #
+    #         await message.reply("Выберите место нарушения:", reply_markup=areas_keyboard)
+    #         log.debug(f"User {group_user.first_name} sent photo for detection.")
+    #         await state.set_state(DetectionStates.enter_area)
+    #
+    #
+    #
+    #     elif len(current_group) > 4:
+    #         await message.answer("⚠️ Можно отправить не более 4 фото.")
+    #         del temp_media_groups[media_group_id]
 
 
 @router.callback_query(AreaSelectFactory.filter(), DetectionStates.enter_area)
