@@ -49,7 +49,8 @@ TG_GROUP_ID = -4213770859
 
 TG_GROUP_LINK = "free_orders"
 # id суперпользователей в телеграмм
-SUPER_USERS_TG_ID = (1238658905, 1881884886)
+# SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
+SUPER_USERS_TG_ID = (1238658905,)
 
 VIOLATION_CATEGORY_JSON_FILE = BASEDIR / "bot" / "keyboards" / "category_buttons.json"
 REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")

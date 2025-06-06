@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     BASE_DIR: ClassVar = Path(__file__).parent.parent
     BASE_BOT_DIR: ClassVar = Path(__file__).parent.parent / Path("bot")
     DB_NAME: str
-    SUPER_USER_TG_ID: str
     BOT_TOKEN: str
 
     @property
