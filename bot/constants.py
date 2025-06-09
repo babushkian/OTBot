@@ -44,13 +44,17 @@ ACTIONS_NEEDED = (
     {"action": "Устранить", "fix_time": get_fix_date(days=3, tz=tz)},
 )
 
+# максимальное количество фото
+MAX_SEND_PHOTO = 4
+# время ожидания в секундах загрузки каждого фото когда пользователь отправляет несколько фото
+MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 2
+
+
 # id группы в телеграмм
 TG_GROUP_ID = -4213770859
-
-TG_GROUP_LINK = "free_orders"
 # id суперпользователей в телеграмм
-# SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
-SUPER_USERS_TG_ID = (1238658905,)
+SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
+# SUPER_USERS_TG_ID = (1238658905,)
 
-VIOLATION_CATEGORY_JSON_FILE = BASEDIR / "bot" / "keyboards" / "category_buttons.json"
+VIOLATION_CATEGORY_JSON_FILE = BASEDIR / Path("bot") / Path("keyboards") / Path("category_buttons.json")
 REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")
