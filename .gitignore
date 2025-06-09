@@ -12,5 +12,6 @@ logs
 static
 report.pdf
 *.jpg
-/typst
-
+/typst/violation_images/*.jpg
+/typst/report.typ
+/bot/migration/versions/*.py

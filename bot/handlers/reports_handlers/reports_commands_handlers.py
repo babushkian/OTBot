@@ -38,6 +38,7 @@ async def handle_report_type_select(callback: types.CallbackQuery,
         case "sum":
             periods_to_kb = (
                 {"per": "today", "name": "Сегодня"},
+                {"per": "today_active", "name": "Активные за сегодня"},
                 {"per": "month", "name": "С начала месяца"},
                 {"per": "choose", "name": "Ввести интервал"},
             )
@@ -149,6 +150,12 @@ async def handle_report_sum(callback: types.CallbackQuery,
             end_date = datetime.now(tz=tz)
 
             violations = await violation_repo.get_all_violations_by_date(start_date, end_date)
+
+        case "today_active":
+            start_date = datetime.now(tz=tz) - timedelta(days=1)
+            end_date = datetime.now(tz=tz)
+
+            violations = await violation_repo.get_all_active_violations_by_date(start_date, end_date)
 
         case "month":
             start_date = datetime(day=1,
