@@ -12,3 +12,5 @@ logs
 static
 report.pdf
 *.jpg
+/typst
+
