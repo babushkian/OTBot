@@ -1,9 +1,11 @@
 """Точка вхожа в приложение."""
 import asyncio
+import contextlib
 
 from asyncio.exceptions import CancelledError
 
 from aiogram import Bot, Dispatcher
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
 
@@ -16,14 +18,16 @@ from logger_config import log
 async def on_startup(bot: Bot) -> None:  # функция выполняется при запуске бота
     """Функция на выполнение при запуске бота."""
     for chat in SUPER_USERS_TG_ID:
-        await bot.send_message(chat_id=chat, text="Бот вышел online.")
+        with contextlib.suppress(TelegramForbiddenError):
+            await bot.send_message(chat_id=chat, text="Бот вышел online.")
     log.info("Бот запушен.")
 
 
 async def on_shutdown(bot: Bot) -> None:
     """Функция на выполнение при отключении бота."""
     for chat in SUPER_USERS_TG_ID:
-        await bot.send_message(chat_id=chat, text="Бот offline.")
+        with contextlib.suppress(TelegramForbiddenError):
+            await bot.send_message(chat_id=chat, text="Бот offline.")
     log.info("Бот выключен.")
 
 
