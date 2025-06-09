@@ -1,6 +1,5 @@
 """Базовые команды telegram."""
 
-
 from aiogram import Router, types
 from aiogram.types import FSInputFile
 from aiogram.filters import Command, CommandStart
@@ -9,6 +8,7 @@ from bot.config import BASEDIR
 from bot.constants import TG_GROUP_ID
 from bot.db.models import UserModel
 from logger_config import log
+from bot.set_bot_commands import set_bot_commands
 from bot.keyboards.common_keyboards import generate_share_contact_keyboard
 
 router = Router(name=__name__)
@@ -54,19 +54,9 @@ async def command_instruction(message: types.Message,
 @router.message(Command("help"))
 async def command_help(message: types.Message, user: UserModel | None) -> None:
     """Инструкция приложения."""
-    help_text = (
-        """\nИнструкция по использованию:\n
-        Получить подробную инструкцию в формате pdf можно по команде:\n
-        /instruction\n\n
-        Краткая инструкция по использованию:\n\nПримечание: чтобы просмотреть файлы excel xlsx убедитесь, 
-        что у вас установлено приложение для чтения 
-        файлов excel.\n
-        """
-        if user
-        else
-        """Для начала работы с ботом необходима регистрация. Для этого, введите команду /start.\n""")
-
+    if user:
+        await set_bot_commands(message.bot, user)
+        help_text = "Получить подробную инструкцию в формате pdf можно по команде:\n/instruction"
+    else:
+        help_text = "Для начала работы с ботом необходима регистрация. Для этого, введите команду /start."
     await message.answer(text=help_text)
-
-
-

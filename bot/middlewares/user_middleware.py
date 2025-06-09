@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 from bot.constants import TG_GROUP_ID
 from logger_config import log
 from bot.bot_exceptions import EmptyDatabaseSessionError
-from bot.set_bot_commands import set_bot_commands
 from bot.repositories.user_repo import UserRepository
 
 
@@ -22,7 +21,7 @@ class UserCheckMiddleware(BaseMiddleware):
     async def __call__(self,
                        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
                        event: types,
-                       data: dict[str, Any]) -> tuple:
+                       data: dict[str, Any]) -> tuple | None:
         """Запускает проверку пользователя."""
         session: AsyncSession = data.get("session")
 
@@ -52,7 +51,7 @@ class UserCheckMiddleware(BaseMiddleware):
                 data["group_user"] = user
         except TelegramBadRequest:
             data["group_user"] = False
-            log.warning(f"ILLEGAL attempt to access ueser not been in group {TG_GROUP_ID} "
+            log.warning(f"ILLEGAL attempt to access user not been in group {TG_GROUP_ID} "
                         f"id: {event.from_user.id}, "
                         f"tg_name: {event.from_user.full_name}.")
 
@@ -60,7 +59,5 @@ class UserCheckMiddleware(BaseMiddleware):
             data["access_denied"] = True
         else:
             data["access_denied"] = False
-
-        await set_bot_commands(event.bot, user)
 
         return await handler(event, data)

@@ -1,7 +1,7 @@
 ---
 title: OTBot README
 created: 30.05.2025
-modified: 04.06.2025
+modified: 09.06.2025
 ---
 # Предназначение бота
 - Бот предназначен для автоматизации процессов создания и учёта предписаний, хранения информации и  создания статистических отчётов для отдела охраны труда. Подробная инструкция пользователя доступна в папке `/bot/docs`.
@@ -16,7 +16,6 @@ git clone <project link>
 ```text
 DB_NAME=otbot.db
 BOT_TOKEN=1241555657:AFASWz0lUfUrllP89gTPuorzH-JhBiylKmU
-SUPER_USER_TG_ID=1234567890
 ```
 
 - Установить uv на сервер.
@@ -29,7 +28,8 @@ pip install uv
 uv sync
 ```
 
-- Установить [typst](https://typst.app/), который используется для генерации pdf отчетов:
+- Если нужно запускать на тестовой машине, то в окружение необходимо:
+    - Установить [typst](https://typst.app/), который используется для генерации pdf отчетов:
 ```bash
 # windows
 winget install --id Typst.Typst # возможно потребуется добавление typst в PATH
@@ -71,14 +71,15 @@ docker build -t otbot .
 ```
 - запуск контейнера
 ```bash
-docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
+docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" -v "$(pwd)/typst:/app/typst" -v "$(pwd)/violations:/app/violations" --name otbot-ins otbot
 ```
 - команды управления 
 ```bash
-docker ps -a  # Все контейнеры
-docker logs otbot-instance  # Посмотреть логи 
-docker stop otbot-instance # Остановить контейнер
-docker rm otbot-instance # Удалить контейнер
+docker ps -a  # все контейнеры
+docker logs otbot-ins  # посмотреть логи (флаг -f делает просмотр постоянным)
+docker stop otbot-ins # остановить контейнер
+docker rm otbot-ins # удалить контейнер
+docker start otbot-ins  # запустить контейнер
 ```
 
 ## Окончательная настройка
@@ -91,5 +92,6 @@ docker rm otbot-instance # Удалить контейнер
 
 ## Примечания 
 - Одобрять пользователей могут только супер пользователи (администраторы бота).  Поменять или добавить список супер пользователей можно в файле `constants.py` (переменная: `SUPER_USERS_TG_ID`).
+- `telegram_id` целевой группы для рассылки сообщений находится в переменной `TG_GROUP_ID` `constants.py`.
 
 [[OTBot]]
