@@ -10,7 +10,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole, ViolationStatus
-from bot.constants import TG_GROUP_ID, ACTIONS_NEEDED, MAX_SEND_PHOTO, MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS
+from bot.constants import TG_GROUP_ID, action_needed_deadline, MAX_SEND_PHOTO, MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS
 from bot.db.models import UserModel, ViolationModel
 from logger_config import log
 from bot.repositories.area_repo import AreaRepository
@@ -195,7 +195,7 @@ async def handle_set_violation_category(callback: types.CallbackQuery,
     """Обрабатывает заполнение категории нарушения."""
     category = await get_violation_category_by_cell_id(callback_data.category)
     await state.update_data(category=category)
-    actions = [line["action"] for line in ACTIONS_NEEDED]
+    actions = [line["action"] for line in action_needed_deadline()]
     actions_to_kb = [{"id": index, "text": action[:200]} for index, action
                      in enumerate(actions, start=1)]
 
@@ -267,8 +267,7 @@ async def handle_ok_button(callback: types.CallbackQuery,
     await callback.message.bot.send_photo(chat_id=user_tg, photo=photo_file, caption=caption)
 
     # текст для проверки
-    # actions = [line["action"] for line in ACTIONS_NEEDED]
-    actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in ACTIONS_NEEDED]
+    actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
     data_text = (f"\nМесто нарушения: {area.name}\n"
                  f"Описание: {data['description']}\n"
                  f"Категория: {data['category']}\n"
@@ -289,8 +288,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
     """Обработчик для ответов "Да" или "Нет" при обнаружении нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
-        # actions = [line["action"] for line in ACTIONS_NEEDED]
-        actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in ACTIONS_NEEDED]
+        actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
         violation_repo = ViolationRepository(session)
         violation = ViolationModel(area_id=data["area_id"],
                                    description=data["description"],
