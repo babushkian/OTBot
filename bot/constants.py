@@ -35,7 +35,8 @@ tz = timezone(timedelta(hours=LOCAL_TIMEZONE))
 
 # мероприятия для нарушений
 
-def action_needed_deadline():
+def action_needed_deadline() -> tuple[dict[str, str], ...]:
+    """Возвращает кортеж действий для исправления с функциями, определяющими срок исполнения."""
     return (
         {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1, tz=tz)},
         {"action": "Оградить опасную зону", "fix_time": "Немедленно"},
@@ -53,7 +54,9 @@ MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 2
 
 
 # id группы в телеграмм
-TG_GROUP_ID = -1002157254601
+TG_GROUP_ID = -1002538216554
+# TG_GROUP_ID = -1002157254601 # тестовый бот
+
 # id суперпользователей в телеграмм
 SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
 #SUPER_USERS_TG_ID = (177201205,)

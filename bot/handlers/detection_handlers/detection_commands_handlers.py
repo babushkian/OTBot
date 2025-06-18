@@ -10,7 +10,12 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole, ViolationStatus
-from bot.constants import TG_GROUP_ID, action_needed_deadline, MAX_SEND_PHOTO, MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS
+from bot.constants import (
+    TG_GROUP_ID,
+    MAX_SEND_PHOTO,
+    MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS,
+    action_needed_deadline,
+)
 from bot.db.models import UserModel, ViolationModel
 from logger_config import log
 from bot.repositories.area_repo import AreaRepository
