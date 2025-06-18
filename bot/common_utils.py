@@ -36,7 +36,6 @@ def verify_string_as_integer(input_string: str) -> tuple[bool, str | None]:
 def get_fix_date(days: int, tz: timezone = timezone(timedelta(hours=6))) -> str:
     """Возвращает дату в формате DD.MM.YYYY, устранения нарушения от текущего дня. Проверяет выходные дни."""
     fix_date = datetime.now(tz=tz) + timedelta(days=days)
-
     while fix_date.weekday() >= 5:
         fix_date += timedelta(days=1)
 
