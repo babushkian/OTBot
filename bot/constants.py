@@ -34,15 +34,18 @@ LOCAL_TIMEZONE = 6
 tz = timezone(timedelta(hours=LOCAL_TIMEZONE))
 
 # мероприятия для нарушений
-ACTIONS_NEEDED = (
-    {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1, tz=tz)},
-    {"action": "Оградить опасную зону", "fix_time": "Немедленно"},
-    {"action": "Отстранить от работы", "fix_time": "Немедленно"},
-    {"action": "Превести в соответствие", "fix_time": get_fix_date(days=3, tz=tz)},
-    {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=3, tz=tz)},
-    {"action": "Усилить контроль за выполнением работ", "fix_time": "Немедленно"},
-    {"action": "Устранить", "fix_time": get_fix_date(days=3, tz=tz)},
-)
+
+def action_needed_deadline() -> tuple[dict[str, str], ...]:
+    """Возвращает кортеж действий для исправления с функциями, определяющими срок исполнения."""
+    return (
+        {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1, tz=tz)},
+        {"action": "Оградить опасную зону", "fix_time": "Немедленно"},
+        {"action": "Отстранить от работы", "fix_time": "Немедленно"},
+        {"action": "Превести в соответствие", "fix_time": get_fix_date(days=3, tz=tz)},
+        {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=3, tz=tz)},
+        {"action": "Усилить контроль за выполнением работ", "fix_time": "Немедленно"},
+        {"action": "Устранить", "fix_time": get_fix_date(days=3, tz=tz)},
+    )
 
 # максимальное количество фото
 MAX_SEND_PHOTO = 4
@@ -52,9 +55,11 @@ MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 2
 
 # id группы в телеграмм
 TG_GROUP_ID = -1002538216554
+# TG_GROUP_ID = -1002157254601 # тестовый бот
+
 # id суперпользователей в телеграмм
 SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
-# SUPER_USERS_TG_ID = (1238658905,)
+#SUPER_USERS_TG_ID = (177201205,)
 
 VIOLATION_CATEGORY_JSON_FILE = BASEDIR / Path("bot") / Path("keyboards") / Path("category_buttons.json")
 REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")
