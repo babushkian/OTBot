@@ -1,6 +1,7 @@
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1
+ENV TZ=Asia/Omsk
 
 # Устанавливаем необходимые системные зависимости
 RUN apt-get update && \

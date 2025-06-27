@@ -33,7 +33,8 @@ def create_typst_report(created_by: UserModel,
         typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
                          r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
                          r"\typst-x86_64-pc-windows-msvc\typst.exe")
-
+        # упрощенный путь к экзешнику, создающему отчеты
+        typst_command = Path(BASEDIR / "typst" / "typst.exe")
         cmd = [typst_command, "compile", report_typ_file, output_pdf]
 
     else:
