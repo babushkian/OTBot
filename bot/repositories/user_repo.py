@@ -34,6 +34,28 @@ class UserRepository:
             log.success("User with id {user_id} found successfully", user_id=user_telegram_id)
             return result.scalars().first()
 
+
+    async def get_user_by_id(self, user_id: int) -> UserModel | None:
+        """Получение пользователя по идентификатору в таблице пользователей.
+
+        Например, для передачи фамилии ответственного через инлайн-клавиатуру.
+        """
+        try:
+            result = await self.session.execute(select(UserModel).where(UserModel.id == user_id))
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            log.error("SQLAlchemyError getting user with id {user_id}", user_id=user_id)
+            log.exception(e)
+            return None
+        except Exception as e:
+            log.error("Error getting user with id {user_id}", user_id=user_id)
+            log.exception(e)
+            return None
+        else:
+            log.success("User with id {user_id} found successfully", user_id=user_id)
+            return result.scalars().first()
+
+
     async def get_approved_user_by_telegram_id(self, user_telegram_id: int) -> UserModel | None:
         """Получение одобренного (is_approved=True) пользователя по telegram_id."""
         try:

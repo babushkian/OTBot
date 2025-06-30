@@ -45,7 +45,7 @@ class ResponsibleForAreaFactory(CallbackData, prefix="arearep"):
     """Фабрика для создания callback_data выбора ответственного за место нарушения."""
 
     id: int
-    responsible_name: str
+    # responsible_name: str
 
 
 class AreaFieldToUpdateFactory(CallbackData, prefix="arfield"):

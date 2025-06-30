@@ -139,22 +139,31 @@ async def add_area_description(message: types.Message,
     await message.answer("Выберите ответственного", reply_markup=users_keyboard)
 
 
-@router.callback_query(ResponsibleForAreaFactory.filter(), AreaAddOrUpdateStates.enter_responsible)
-async def select_area_responsible_user(callback: types.CallbackQuery,
+@router.callback_query(ResponsibleForAreaFactory.filter(F.id==0), AreaAddOrUpdateStates.enter_responsible)
+async def select_manual_area_responsible_user(callback: types.CallbackQuery,
                                        callback_data: ResponsibleForAreaFactory,
                                        state: FSMContext) -> None:
-    """Обрабатывает кнопку выбранного пользователя для одобрения."""
-    if callback_data.id == 0:
-        await callback.message.answer("Введите ФИО ответственного:", reply_markup=generate_cancel_button())
-        await state.set_state(AreaAddOrUpdateStates.enter_responsible_text)
-        await callback.answer()
-        return
+    """Добавляет к месту нарушения ответственного, введенного вручную (его нет в базе.)"""
+    await callback.message.answer("Введите ФИО ответственного:", reply_markup=generate_cancel_button())
+    await state.set_state(AreaAddOrUpdateStates.enter_responsible_text)
+    await callback.answer()
+    return
 
+
+@router.callback_query(ResponsibleForAreaFactory.filter(F.id>0), AreaAddOrUpdateStates.enter_responsible)
+async def select_area_responsible_user(callback: types.CallbackQuery,
+                                       callback_data: ResponsibleForAreaFactory,
+                                       state: FSMContext,
+                                       session: AsyncSession,
+                                       ) -> None:
+    """Обрабатывает кнопку ответственного, который содержится в базе."""
     await state.update_data(responsible_user_id=callback_data.id)
     data = await state.get_data()
+    user_repo = UserRepository(session)
+    responsible = await user_repo.get_user_by_id(data["responsible_user_id"])
     data_text = (f"\nМесто нарушения: {data['name']}\n"
                  f"Описание: {data['description']}\n"
-                 f"Ответственный: {callback_data.responsible_name}\n")
+                 f"Ответственный: {responsible.first_name}\n")
 
     await callback.message.answer("Ввод данных завершен.\n"
                                   "Введённые данные:\n"
@@ -162,7 +171,7 @@ async def select_area_responsible_user(callback: types.CallbackQuery,
                                   f"Всё верно?", reply_markup=generate_yes_no_keyboard())
     await callback.answer("Выбран ответственный из списка.")
     log.success("Responsible id user chosen with name {responsible} saved in data state",
-                responsible=callback_data.responsible_name)
+                responsible=responsible.first_name)
     await state.set_state(AreaAddOrUpdateStates.completed)
 
 
