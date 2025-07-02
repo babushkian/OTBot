@@ -59,7 +59,7 @@ def generate_typst(violation_json_data: tuple, created_by: UserModel) -> str:
 
         // шапка
         #align(right)[Ответственным: \\ {responsible_str}.]
-        #align(right)[Копия: главному инженеру \\ {report_settings["engineer"]}.]
+        //#align(right)[Копия: главному инженеру \\ {report_settings["engineer"]}.]
         #align(right)[от {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"} \\
         {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}]
 
