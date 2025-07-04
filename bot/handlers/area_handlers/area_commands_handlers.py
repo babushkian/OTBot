@@ -1,5 +1,9 @@
 """Обработчики команд места нарушения."""
 from aiogram import F, Router, types
+
+from aiogram.types import InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -135,7 +139,11 @@ async def add_area_description(message: types.Message,
     users_keyboard = await create_keyboard(items=tuple(users_to_kb),
                                            callback_factory=ResponsibleForAreaFactory,
                                            text_key="name")
-
+    builder = InlineKeyboardBuilder()
+    for row in users_keyboard.inline_keyboard:
+        builder.row(*row)
+    builder.button(text="неизвестный ответсвенный", callback_data=ResponsibleForAreaFactory(id=133))
+    users_keyboard = builder.as_markup()
     await message.answer("Выберите ответственного", reply_markup=users_keyboard)
 
 
@@ -161,18 +169,28 @@ async def select_area_responsible_user(callback: types.CallbackQuery,
     data = await state.get_data()
     user_repo = UserRepository(session)
     responsible = await user_repo.get_user_by_id(data["responsible_user_id"])
-    data_text = (f"\nМесто нарушения: {data['name']}\n"
-                 f"Описание: {data['description']}\n"
-                 f"Ответственный: {responsible.first_name}\n")
+    if responsible:
+        data_text = (f"\nМесто нарушения: {data['name']}\n"
+                     f"Описание: {data['description']}\n"
+                     f"Ответственный: {responsible.first_name}\n")
 
-    await callback.message.answer("Ввод данных завершен.\n"
-                                  "Введённые данные:\n"
-                                  f"{data_text}\n"
-                                  f"Всё верно?", reply_markup=generate_yes_no_keyboard())
-    await callback.answer("Выбран ответственный из списка.")
-    log.success("Responsible id user chosen with name {responsible} saved in data state",
-                responsible=responsible.first_name)
-    await state.set_state(AreaAddOrUpdateStates.completed)
+        await callback.message.answer("Ввод данных завершен.\n"
+                                      "Введённые данные:\n"
+                                      f"{data_text}\n"
+                                      f"Всё верно?", reply_markup=generate_yes_no_keyboard())
+        await callback.answer("Выбран ответственный из списка.")
+        log.success("Responsible id user chosen with name {responsible} saved in data state",
+                    responsible=responsible.first_name)
+        await state.set_state(AreaAddOrUpdateStates.completed)
+        await callback.answer()
+        return
+
+    await callback.message.answer(text = f"Выбранный ответственный не найден в базе\n"
+                                         f"Начать с начала? /area",
+                                  parse_mode="HTML")
+    await state.clear()
+    await callback.answer()
+
 
 
 @router.message(AreaAddOrUpdateStates.enter_responsible_text)
