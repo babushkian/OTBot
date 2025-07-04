@@ -1,5 +1,5 @@
 """Репозитории пользователя."""
-from typing import Any
+from typing import Any, NewType
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,6 +9,7 @@ from bot.enums import UserRole
 from bot.db.models import UserModel
 from logger_config import log
 
+UserList = NewType("UserList", list[dict[str, Any]])
 
 class UserRepository:
     """Репозиторий пользователя."""
@@ -94,7 +95,7 @@ class UserRepository:
             log.success("User with id {user_id} added successfully", user_id=user.telegram_id)
             return user
 
-    async def get_users_by_role(self, role: UserRole) -> list[dict[str, Any]] | None:
+    async def get_users_by_role(self, role: UserRole) -> UserList | None:
         """Получение всех пользователей с указанной ролью."""
         try:
             users = await self.session.execute(select(UserModel).where(UserModel.user_role == role))
@@ -109,12 +110,14 @@ class UserRepository:
             return None
         else:
             log.success("Users with role {role} found successfully", role=role)
-            return [user.to_dict() for user in users.scalars().all()]
 
-    async def get_not_approved_users(self) -> list[dict[str, Any]] | None:
+            return UserList([user.to_dict() for user in users.scalars().all()])
+
+    async def get_not_approved_users(self) -> UserList | None:
         """Получение всех не одобренных пользователей."""
         try:
-            result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(0)))
+            result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(0)),
+                                                UserModel.is_active.is_(True))
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting not approved users")
@@ -126,12 +129,13 @@ class UserRepository:
             return None
         else:
             log.success("Not approved users found successfully")
-            return [user.to_dict() for user in result.scalars().all()]
+            return UserList([user.to_dict() for user in result.scalars().all()])
 
-    async def get_approved_users(self) -> list[dict[str, Any]] | None:
+    async def get_approved_users(self) -> UserList | None:
         """Получение всех не одобренных пользователей."""
         try:
-            result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(1)))
+            result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(1),
+                                                                        UserModel.is_active.is_(True)))
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting approved users")
@@ -143,7 +147,7 @@ class UserRepository:
             return None
         else:
             log.success("Approved users found successfully")
-            return [user.to_dict() for user in result.scalars().all()]
+            return UserList([user.to_dict() for user in result.scalars().all()])
 
     async def update_user_by_id(self, user_id: int, update_data: dict[str, Any]) -> bool:
         """Обновление данных пользователя по его user_id."""
