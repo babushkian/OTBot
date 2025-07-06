@@ -55,7 +55,7 @@ MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 2
 
 # id группы в телеграмм
 # TG_GROUP_ID = -1002538216554
-TG_GROUP_ID = -1002157254601 # тестовый бот
+TG_GROUP_ID = -1002157254601 # тестовая группа
 
 # id суперпользователей в телеграмм
 # SUPER_USERS_TG_ID = (1238658905, 1881884886, 177201205)
