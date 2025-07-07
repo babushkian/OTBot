@@ -1,5 +1,4 @@
 """Команды одобрения пользователей администратором."""
-from typing import Any, NewType
 
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -11,7 +10,7 @@ from bot.enums import UserRole
 from bot.constants import TG_GROUP_ID, SUPER_USERS_TG_ID
 from bot.db.models import UserModel
 from logger_config import log
-from bot.repositories.user_repo import UserRepository, UserList
+from bot.repositories.user_repo import UserList, UserRepository
 from bot.handlers.approve_handlers.states import ApproveUserStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import (
@@ -88,12 +87,13 @@ async def disapprove_command(message: types.Message, session: AsyncSession, grou
     if not users:
         await message.reply(no_users_message)
         return
+    users = UserList([user.to_dict() for user in users])
     cleaned_users = await check_chat_members(user_repo, users, message)
     if not cleaned_users:
         await message.reply(no_users_message)
         return
-    users_to_disapprove = tuple([{"id": line["id"], "phone_number": f"{line["first_name"]} {line["phone_number"]}"}
-                                 for line in cleaned_users])
+    users_to_disapprove = tuple([{"id": user.id, "phone_number": f"{user.first_name} {user.phone_number}"}
+                                 for user in cleaned_users])
     users_to_approve_kb = await create_keyboard(
         items=users_to_disapprove, text_key="phone_number", callback_factory=DisApproveUserFactory,
     )
@@ -105,8 +105,6 @@ async def delete_command(message: types.Message,
                          session: AsyncSession,
                          group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    # if message.from_user.id not in SUPER_USERS_TG_ID:
-    #     return
     if group_user.user_role != UserRole.ADMIN:
         return
 

@@ -1,10 +1,7 @@
 """Обработчики команд места нарушения."""
 from aiogram import F, Router, types
-
-from aiogram.types import InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole
@@ -155,7 +152,6 @@ async def select_manual_area_responsible_user(callback: types.CallbackQuery,
     await callback.message.answer("Введите ФИО ответственного:", reply_markup=generate_cancel_button())
     await state.set_state(AreaAddOrUpdateStates.enter_responsible_text)
     await callback.answer()
-    return
 
 
 @router.callback_query(ResponsibleForAreaFactory.filter(F.id>0), AreaAddOrUpdateStates.enter_responsible)
@@ -185,8 +181,8 @@ async def select_area_responsible_user(callback: types.CallbackQuery,
         await callback.answer()
         return
 
-    await callback.message.answer(text = f"Выбранный ответственный не найден в базе\n"
-                                         f"Начать с начала? /area",
+    await callback.message.answer(text = "Выбранный ответственный не найден в базе\n"
+                                         "Начать с начала? /area",
                                   parse_mode="HTML")
     await state.clear()
     await callback.answer()

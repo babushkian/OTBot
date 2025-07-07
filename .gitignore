@@ -16,3 +16,4 @@ report.pdf
 /typst/report.typ
 /bot/migration/versions/*.py
 /typst/typst.exe
+*.sqbpro

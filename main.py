@@ -13,10 +13,12 @@ from bot.config import settings
 from bot.handlers import router as main_router
 from bot.constants import SUPER_USERS_TG_ID
 from logger_config import log
+from bot.set_bot_commands import check_main_menu_on_startup
 
 
 async def on_startup(bot: Bot) -> None:  # функция выполняется при запуске бота
     """Функция на выполнение при запуске бота."""
+    await check_main_menu_on_startup(bot)
     for chat in SUPER_USERS_TG_ID:
         with contextlib.suppress(TelegramForbiddenError):
             await bot.send_message(chat_id=chat, text="Бот вышел online.")

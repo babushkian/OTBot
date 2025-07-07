@@ -1,5 +1,6 @@
 """Репозитории пользователя."""
 from typing import Any, NewType
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -63,7 +64,7 @@ class UserRepository:
             result = await self.session.execute(
                 select(UserModel).where(
                     UserModel.telegram_id == user_telegram_id,
-                    UserModel.is_approved == bool(1)))
+                    UserModel.is_approved == bool(1), UserModel.is_active.is_(True)))
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting user with id {user_id}", user_id=user_telegram_id)
@@ -116,8 +117,8 @@ class UserRepository:
     async def get_not_approved_users(self) -> UserList | None:
         """Получение всех не одобренных пользователей."""
         try:
-            result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(0)),
-                                                UserModel.is_active.is_(True))
+            stmt = select(UserModel).where(UserModel.is_approved.is_(False), UserModel.is_active.is_(True))
+            result = await self.session.execute(stmt)
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting not approved users")
@@ -131,7 +132,7 @@ class UserRepository:
             log.success("Not approved users found successfully")
             return UserList([user.to_dict() for user in result.scalars().all()])
 
-    async def get_approved_users(self) -> UserList | None:
+    async def get_approved_users(self) -> Sequence[UserModel] | None:
         """Получение всех не одобренных пользователей."""
         try:
             result = await self.session.execute(select(UserModel).where(UserModel.is_approved == bool(1),
@@ -147,7 +148,7 @@ class UserRepository:
             return None
         else:
             log.success("Approved users found successfully")
-            return UserList([user.to_dict() for user in result.scalars().all()])
+            return result.scalars().all()
 
     async def update_user_by_id(self, user_id: int, update_data: dict[str, Any]) -> bool:
         """Обновление данных пользователя по его user_id."""

@@ -1,13 +1,16 @@
+from typing import Any, NewType
+
 import pytest
-from aiogram.fsm.context import FSMContext
+
 from aiogram.types import Message
-from bot.handlers.approve_handlers import approve_commands
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+
 from bot.enums import UserRole
 from bot.constants import SUPER_USERS_TG_ID
-from bot.keyboards.inline_keyboards.callback_factories import (
-    ApproveUserFactory, DisApproveUserFactory, DeletedUserFactory,
-)
+from bot.handlers.approve_handlers import approve_commands
 
+FakeUsers = NewType("FakeUsers", list[dict[str, Any]])
 
 @pytest.fixture
 def mock_message(mocker):
@@ -23,11 +26,12 @@ def mock_user_repo(mocker):
 
 
 @pytest.fixture
-def fake_users():
-    return [
+def fake_users() -> FakeUsers:
+    return FakeUsers([
         {"id": 1, "first_name": "John", "phone_number": "123", "telegram_id": 1001, "is_approved": False},
-        {"id": 2, "first_name": "Jane", "phone_number": "456", "telegram_id": 1002, "is_approved": False}
-    ]
+        {"id": 2, "first_name": "Jane", "phone_number": "456", "telegram_id": 1002, "is_approved": False},
+        {"id": 3, "first_name": "Joban", "phone_number": "1458", "telegram_id": 1003, "is_approved": True},
+    ])
 
 
 @pytest.fixture
@@ -117,9 +121,12 @@ async def test_delete_command_users_found(mock_message, mocker, fake_users, mock
 
 
 @pytest.mark.asyncio
-async def test_check_chat_members_skips_invalid(mocker, fake_users):
+async def test_check_chat_members_skips_invalid(mocker, fake_users: list[dict[str, Any]]):
+    """Проверяет пользователей, которые вышли из чата, привязанного к боту"""
     mock_message = mocker.Mock()
-    mock_message.bot.get_chat_member = mocker.AsyncMock(side_effect=[None, Exception("not a member")])
+    mock_message.bot.get_chat_member = mocker.AsyncMock(side_effect=[None,
+                                TelegramBadRequest(method=mock_message,message="не состоит"),
+                                TelegramBadRequest(method=mock_message, message="не состоит")])
 
     user_repo = mocker.Mock()
     user_repo.update_user_by_id = mocker.AsyncMock()
@@ -128,4 +135,5 @@ async def test_check_chat_members_skips_invalid(mocker, fake_users):
     cleaned = await approve_commands.check_chat_members(user_repo, fake_users, mock_message)
 
     assert len(cleaned) == 1
-    user_repo.update_user_by_id.assert_awaited_once()
+    user_repo.update_user_by_id.assert_awaited()
+    assert user_repo.update_user_by_id.await_count==2
