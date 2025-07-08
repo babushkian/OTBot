@@ -146,9 +146,8 @@ async def add_area_description(message: types.Message,
 
 @router.callback_query(ResponsibleForAreaFactory.filter(F.id==0), AreaAddOrUpdateStates.enter_responsible)
 async def select_manual_area_responsible_user(callback: types.CallbackQuery,
-                                       callback_data: ResponsibleForAreaFactory,
                                        state: FSMContext) -> None:
-    """Добавляет к месту нарушения ответственного, введенного вручную (его нет в базе.)"""
+    """Добавляет к месту нарушения ответственного, введенного вручную (его нет в базе)."""
     await callback.message.answer("Введите ФИО ответственного:", reply_markup=generate_cancel_button())
     await state.set_state(AreaAddOrUpdateStates.enter_responsible_text)
     await callback.answer()
