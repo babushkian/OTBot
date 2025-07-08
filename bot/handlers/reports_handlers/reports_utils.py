@@ -3,7 +3,7 @@ import re
 import json
 
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import suppress
 
 from openpyxl import Workbook
@@ -118,12 +118,11 @@ def generate_typst(violation_json_data: tuple, created_by: UserModel) -> str:
             Нарушение зафиксировал: {violation['detector']['first_name']}"""
 
         # заполнение таблицы
-        localized_datetime = violation["created_at"].astimezone(tz=tz).strftime("%d.%m.%Y %H:%M")
         # Форматируем дату с учетом временной зоны
-        # formatted_date = localized_datetime.strftime('%d.%m.%Y %H:%M %Z%z')
+        localized_datetime = (violation["created_at"].replace(tzinfo=timezone.utc)
+                              .astimezone(tz=tz).strftime("%d.%m.%Y %H:%M"))
         typst_code += f"""
             [{violation["id"]}],
-            //[{violation['created_at'].strftime('%d.%m.%Y %H:%M')}],
             [{localized_datetime}],
             image("{image_path_relative}", width: {report_settings["col_width"]["C"]}),
             [#align(left)[{description}]],
