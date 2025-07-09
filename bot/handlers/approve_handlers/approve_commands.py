@@ -92,7 +92,7 @@ async def disapprove_command(message: types.Message, session: AsyncSession, grou
     if not cleaned_users:
         await message.reply(no_users_message)
         return
-    users_to_disapprove = tuple([{"id": user.id, "phone_number": f"{user.first_name} {user.phone_number}"}
+    users_to_disapprove = tuple([{"id": user["id"], "phone_number": f"{user["first_name"]} {user["phone_number"]}"}
                                  for user in cleaned_users])
     users_to_approve_kb = await create_keyboard(
         items=users_to_disapprove, text_key="phone_number", callback_factory=DisApproveUserFactory,
