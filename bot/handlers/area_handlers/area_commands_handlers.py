@@ -136,11 +136,11 @@ async def add_area_description(message: types.Message,
     users_keyboard = await create_keyboard(items=tuple(users_to_kb),
                                            callback_factory=ResponsibleForAreaFactory,
                                            text_key="name")
-    builder = InlineKeyboardBuilder()
-    for row in users_keyboard.inline_keyboard:
-        builder.row(*row)
-    builder.button(text="неизвестный ответсвенный", callback_data=ResponsibleForAreaFactory(id=133))
-    users_keyboard = builder.as_markup()
+    # builder = InlineKeyboardBuilder()
+    # for row in users_keyboard.inline_keyboard:
+    #     builder.row(*row)
+    # builder.button(text="неизвестный ответсвенный", callback_data=ResponsibleForAreaFactory(id=133))
+    # users_keyboard = builder.as_markup()
     await message.answer("Выберите ответственного", reply_markup=users_keyboard)
 
 
