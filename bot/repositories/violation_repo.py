@@ -50,7 +50,7 @@ class ViolationRepository:
                     {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
                     | {"detector": violation.detector.to_dict()})
 
-    async def get_all_violations(self) -> [dict, ...]:
+    async def get_all_violations(self) -> tuple[dict[str, Any], ...]:
         """Получение всех мест нарушения."""
         try:
             result = await self.session.execute(select(ViolationModel)
@@ -63,11 +63,11 @@ class ViolationRepository:
             await self.session.rollback()
             log.error("SQLAlchemyError getting violations")
             log.exception(e)
-            return None
+            return ()
         except Exception as e:
             log.error("Error getting violations")
             log.exception(e)
-            return None
+            return ()
         else:
             violations = tuple(result.scalars().all())
             log.success("{col} violations found successfully", col=len(violations))
@@ -145,7 +145,7 @@ class ViolationRepository:
         else:
             log.success("Violation with id {violation} deleted successfully", violation=violation_id)
 
-    async def get_not_reviewed_violations(self) -> tuple[dict, ...] | None:
+    async def get_not_reviewed_violations(self) -> tuple[dict[str, Any], ...] | None:
         """Получение всех непроверенных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
@@ -176,7 +176,7 @@ class ViolationRepository:
                  | {"detector": violation.detector.to_dict()}) for violation in violations
             ])
 
-    async def get_active_violations(self) -> tuple[dict, ...] | None:
+    async def get_active_violations(self) -> tuple[dict[str, Any], ...] | None:
         """Получение всех активных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
@@ -209,7 +209,7 @@ class ViolationRepository:
 
     async def get_all_violations_by_date(self,
                                          start_date: datetime,
-                                         end_date: datetime) -> [dict, ...]:
+                                         end_date: datetime) -> tuple[dict[str, Any], ...]:
         """Получение нарешений в периоде дет."""
         try:
             result = await self.session.execute(select(ViolationModel).order_by(ViolationModel.id)
@@ -244,7 +244,7 @@ class ViolationRepository:
 
     async def get_all_active_violations_by_date(self,
                                                 start_date: datetime,
-                                                end_date: datetime) -> [dict, ...]:
+                                                end_date: datetime) -> tuple[dict[str, Any], ...]:
         """Получение нарешений в периоде дет."""
         try:
             result = await self.session.execute(select(ViolationModel).order_by(ViolationModel.id)
@@ -278,7 +278,7 @@ class ViolationRepository:
                  | {"detector": violation.detector.to_dict()}) for violation in violations
             ])
 
-    async def get_active_violations_id_description(self) -> tuple[dict, ...] | None:
+    async def get_active_violations_id_description(self) -> tuple[dict[str, Any], ...] | None:
         """Получение всех активных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel.id, ViolationModel.description)

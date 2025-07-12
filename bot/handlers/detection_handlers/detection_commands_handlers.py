@@ -334,15 +334,19 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
 
 
 @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
-async def handle_violation_review(callback: types.CallbackQuery,
-                                  callback_data: ViolationsFactory,
-                                  state: FSMContext,
-                                  session: AsyncSession,
-                                  group_user: UserModel) -> None:
+async def handle_violation_review(
+    callback: types.CallbackQuery,
+    callback_data: ViolationsFactory,
+    state: FSMContext,
+    session: AsyncSession,
+    group_user: UserModel,
+) -> None:
     """Обработчик для просмотра нарушения при одобрении."""
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
     violation = await violation_repo.get_violation_by_id(callback_data.id)
+    if violation is None:
+        log.error("Не существует нарушения с id={id}", id=callback_data.id)
     await state.update_data(detector_tg=violation["detector"]["telegram_id"],
                             description=violation["description"],
                             area=violation["area"]["name"])
