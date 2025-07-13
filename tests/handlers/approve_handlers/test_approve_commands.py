@@ -1,7 +1,9 @@
+"""Тесты для обработчиков для одобрения и блокировки пользователей."""
 from typing import Any, NewType
 
 import pytest
 
+from pytest_mock import MockType, MockerFixture
 from aiogram.types import Message
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
@@ -13,7 +15,8 @@ from bot.handlers.approve_handlers import approve_commands
 FakeUsers = NewType("FakeUsers", list[dict[str, Any]])
 
 @pytest.fixture
-def mock_message(mocker):
+def mock_message(mocker: MockerFixture) -> MockType:
+    """Фейковый объект сообщения в телеграм."""
     message = mocker.Mock(spec=Message)
     message.reply = mocker.AsyncMock()
     message.bot.get_chat_member = mocker.AsyncMock()
@@ -21,7 +24,7 @@ def mock_message(mocker):
 
 
 @pytest.fixture
-def mock_user_repo(mocker):
+def mock_user_repo(mocker: MockerFixture) -> MockType:
     return mocker.Mock()
 
 

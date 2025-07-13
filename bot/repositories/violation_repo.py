@@ -41,6 +41,7 @@ class ViolationRepository:
         else:
             log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
 
+            # TODO должно быть violation = result.scalar_one_or_none()
             violation = result.scalars().first()
             if not violation:
                 return None
@@ -63,11 +64,11 @@ class ViolationRepository:
             await self.session.rollback()
             log.error("SQLAlchemyError getting violations")
             log.exception(e)
-            return ()
+            return tuple()
         except Exception as e:
             log.error("Error getting violations")
             log.exception(e)
-            return ()
+            return tuple()
         else:
             violations = tuple(result.scalars().all())
             log.success("{col} violations found successfully", col=len(violations))
@@ -295,4 +296,5 @@ class ViolationRepository:
         else:
             log.success("Active violations found successfully")
             violations = tuple(result.scalars().all())
+            log.debug(violations)
             return tuple([violation.to_dict() for violation in violations])
