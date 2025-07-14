@@ -97,9 +97,8 @@ async def process_media_group_after_delay(message: types.Message,
     merged_photos = await merge_images(photos, gap=10)  # объединённое фото
 
     await handle_get_violation_photo(message, state, group_user, session, merged_photos=merged_photos)
-    # сброс глобальных словарей
-    media_group_timers.clear()
-    media_groups[media_group_id].clear()
+    media_group_timers.pop(media_group_id)
+
 
 
 @router.message(DetectionStates.send_photo)
