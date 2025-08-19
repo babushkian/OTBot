@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramBadRequest
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.constants import TG_GROUP_ID
+from bot.config import settings
 from logger_config import log
 from bot.bot_exceptions import EmptyDatabaseSessionError
 from bot.repositories.user_repo import UserRepository
@@ -47,11 +47,11 @@ class UserCheckMiddleware(BaseMiddleware):
         data["user"] = user
         # проверка на участие в группе
         try:
-            if await event.bot.get_chat_member(TG_GROUP_ID, event.from_user.id):
+            if await event.bot.get_chat_member(settings.TG_GROUP_ID, event.from_user.id):
                 data["group_user"] = user
         except TelegramBadRequest:
             data["group_user"] = False
-            log.warning(f"ILLEGAL attempt to access user not been in group {TG_GROUP_ID} "
+            log.warning(f"ILLEGAL attempt to access user not been in group {settings.TG_GROUP_ID} "
                         f"id: {event.from_user.id}, "
                         f"tg_name: {event.from_user.full_name}.")
 

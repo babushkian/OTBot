@@ -9,9 +9,9 @@ from aiogram.exceptions import TelegramForbiddenError
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
 
-from bot.config import settings
+
 from bot.handlers import router as main_router
-from bot.constants import SUPER_USERS_TG_ID
+from bot.config import settings
 from logger_config import log
 from bot.set_bot_commands import check_main_menu_on_startup
 
@@ -19,7 +19,7 @@ from bot.set_bot_commands import check_main_menu_on_startup
 async def on_startup(bot: Bot) -> None:  # функция выполняется при запуске бота
     """Функция на выполнение при запуске бота."""
     await check_main_menu_on_startup(bot)
-    for chat in SUPER_USERS_TG_ID:
+    for chat in settings.SUPER_USERS_TG_ID:
         with contextlib.suppress(TelegramForbiddenError):
             await bot.send_message(chat_id=chat, text="Бот вышел online.")
     log.info("Бот запушен.")
@@ -27,7 +27,7 @@ async def on_startup(bot: Bot) -> None:  # функция выполняется
 
 async def on_shutdown(bot: Bot) -> None:
     """Функция на выполнение при отключении бота."""
-    for chat in SUPER_USERS_TG_ID:
+    for chat in settings.SUPER_USERS_TG_ID:
         with contextlib.suppress(TelegramForbiddenError):
             await bot.send_message(chat_id=chat, text="Бот offline.")
     log.info("Бот выключен.")

@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole
-from bot.constants import SUPER_USERS_TG_ID
+from bot.config import settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.repositories.area_repo import AreaRepository
@@ -22,7 +22,7 @@ async def area_updating(message: types.Message,
                         session: AsyncSession,
                         state: FSMContext) -> None:
     """Запуск добавление/редактирование места нарушения."""
-    if message.from_user.id not in SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
+    if message.from_user.id not in settings.SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
         return
 
     area_repo = AreaRepository(session)
@@ -44,7 +44,7 @@ async def delete_command(message: types.Message,
                          session: AsyncSession,
                          group_user: UserModel) -> None:
     """Удаление места нарушения администратором."""
-    if message.from_user.id not in SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
+    if message.from_user.id not in settings.SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
         return
 
     area_repo = AreaRepository(session)

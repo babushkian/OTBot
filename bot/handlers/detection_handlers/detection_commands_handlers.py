@@ -10,8 +10,8 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole, ViolationStatus
+from bot.config import settings
 from bot.constants import (
-    TG_GROUP_ID,
     MAX_SEND_PHOTO,
     MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS,
     action_needed_deadline,
@@ -48,6 +48,7 @@ router = Router(name=__name__)
 media_groups = defaultdict(list)
 # счётчик для учёта количества фото
 media_group_timers = {}
+group_caption = {}
 
 
 @router.message(DetectionStates.send_photo, F.media_group_id)
@@ -57,7 +58,6 @@ async def handle_media_group(message: types.Message,
                              session: AsyncSession) -> None:
     """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
     media_group_id = message.media_group_id
-
     if not message.photo:
         return
 
@@ -65,7 +65,8 @@ async def handle_media_group(message: types.Message,
     file_id = message.photo[-1].file_id
     file = await message.bot.get_file(file_id)
     picture = await message.bot.download_file(file.file_path)
-
+    if message.caption:
+        group_caption[media_group_id] = message.caption
     # список всех фото
     media_groups[media_group_id].append(picture.read())
 
@@ -96,7 +97,9 @@ async def process_media_group_after_delay(message: types.Message,
     photos = media_groups.pop(media_group_id)
     merged_photos = await merge_images(photos, gap=10)  # объединённое фото
 
-    await handle_get_violation_photo(message, state, group_user, session, merged_photos=merged_photos)
+    await handle_get_violation_photo(message, state, group_user, session,
+                                     media_group_id,
+                                     merged_photos=merged_photos, )
     media_group_timers.pop(media_group_id)
 
 
@@ -106,33 +109,33 @@ async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
                                      session: AsyncSession,
-                                     merged_photos: BytesIO | None = None) -> None:
+                                     media_group_id=None,
+                                     merged_photos: BytesIO | None = None,
+                                     ) -> None:
     """Обрабатывает получение фото нарушения."""
+
     if not message.photo:
         await message.answer("Необходимо прикрепить фото нарушения.",
                              reply_markup=generate_cancel_button())
         return
-
-    description = message.caption or "Без описания"
+    group_description = group_caption.get(media_group_id)
+    description = message.caption or group_description or "Без описания"
+    if group_description:
+        group_caption.pop(media_group_id)
 
     if merged_photos:
         # несколько объединённых фото
-        await state.update_data(picture=merged_photos.read(),
-                                description=description,
-                                detector_id=group_user.id,
-                                status=ViolationStatus.REVIEW)
-
+        picture = merged_photos
     else:
         # одно фото
         file_id = message.photo[-1].file_id
         file = await message.bot.get_file(file_id)
-
         picture = await message.bot.download_file(file.file_path)
 
-        await state.update_data(picture=picture.read(),
-                                description=description,
-                                detector_id=group_user.id,
-                                status=ViolationStatus.REVIEW)
+    await state.update_data(picture=picture.read(),
+                            description=description,
+                            detector_id=group_user.id,
+                            status=ViolationStatus.REVIEW)
 
     area_repo = AreaRepository(session)
     areas = await area_repo.get_all_areas()
@@ -406,11 +409,11 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
             document = FSInputFile(pdf_file)
 
             try:
-                await message.bot.send_document(chat_id=TG_GROUP_ID,
+                await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
                                                 document=BufferedInputFile(jpeg_file,
                                                                            filename=f"Нарушение №{data['id']}.jpg"),
                                                 caption=caption_jpeg)
-                await message.bot.send_document(chat_id=TG_GROUP_ID,
+                await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
                                                 document=document,
                                                 caption=caption_pdf)
                 log.debug("Violation report {report} sent to group.", report=data["id"])

@@ -6,7 +6,6 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from bot.enums import UserRole
-from bot.constants import SUPER_USERS_TG_ID
 from bot.handlers.approve_handlers import approve_commands
 from bot.db.database import async_session_factory
 from bot.repositories.violation_repo import ViolationRepository

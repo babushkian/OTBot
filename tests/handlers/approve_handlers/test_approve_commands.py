@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from bot.enums import UserRole
-from bot.constants import SUPER_USERS_TG_ID
+from bot.config import settings
 from bot.handlers.approve_handlers import approve_commands
 
 FakeUsers = NewType("FakeUsers", list[dict[str, Any]])
@@ -56,7 +56,7 @@ async def test_approve_command_no_permission(mock_message, mocker, fake_users):
 @pytest.mark.asyncio
 async def test_approve_command_no_users(mock_message, mocker):
     group_user = mocker.Mock()
-    group_user.telegram_id = SUPER_USERS_TG_ID[0]
+    group_user.telegram_id = settings.SUPER_USERS_TG_ID[0]
 
     session = mocker.Mock()
     state = mocker.Mock(spec=FSMContext)
@@ -72,7 +72,7 @@ async def test_approve_command_no_users(mock_message, mocker):
 @pytest.mark.asyncio
 async def test_approve_command_ok(mock_message, mocker, fake_users, mock_create_keyboard):
     group_user = mocker.Mock()
-    group_user.telegram_id = SUPER_USERS_TG_ID[0]
+    group_user.telegram_id = settings.SUPER_USERS_TG_ID[0]
     session = mocker.Mock()
     state = mocker.Mock(spec=FSMContext)
 

@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import UserRole
-from bot.constants import TG_GROUP_ID, SUPER_USERS_TG_ID
+from bot.config import settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.repositories.user_repo import UserList, UserRepository
@@ -31,7 +31,7 @@ async def check_chat_members(user_repo:UserRepository, users:UserList, message:t
     chat_members =  UserList([])
     for line in users:
         try:
-            await message.bot.get_chat_member(TG_GROUP_ID, line["telegram_id"])
+            await message.bot.get_chat_member(settings.TG_GROUP_ID, line["telegram_id"])
             chat_members.append(line)
         except TelegramBadRequest as e:
             log.error(e)
@@ -52,7 +52,7 @@ async def approve_command(message: types.Message,
                           state: FSMContext,
                           group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
-    if group_user.telegram_id not in SUPER_USERS_TG_ID:
+    if group_user.telegram_id not in settings.SUPER_USERS_TG_ID:
         return
     no_users_message = "Нет пользователей для одобрения."
     user_repo = UserRepository(session)

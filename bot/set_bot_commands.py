@@ -4,7 +4,8 @@ from aiogram.types import BotCommand, BotCommandScopeChat
 from aiogram.exceptions import TelegramBadRequest
 
 from bot.enums import UserRole
-from bot.constants import SUPER_USERS_TG_ID, otpb_commands, admin_commands, common_commands
+from bot.config import settings
+from bot.constants import otpb_commands, admin_commands, common_commands
 from bot.db.models import UserModel
 from logger_config import log
 from bot.db.database import async_session_factory
@@ -27,7 +28,7 @@ async def set_bot_commands(bot: Bot, user: UserModel) -> None:
                 BotCommand(**command) for command in common_commands
             ]
 
-    if user.telegram_id in SUPER_USERS_TG_ID:
+    if user.telegram_id in settings.SUPER_USERS_TG_ID:
         commands = [
             BotCommand(**command) for command in admin_commands
         ]

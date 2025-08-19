@@ -4,7 +4,7 @@ from bot.handlers.area_handlers import area_commands
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from bot.enums import UserRole
-from bot.constants import SUPER_USERS_TG_ID
+from bot.config import settings
 # проверка area_updating
 # проверка на то, что пользователь не является суперюзером или админом
 # получить список зон для правонарушений
@@ -15,7 +15,7 @@ def mock_message(mocker):
     message = mocker.Mock(spec=Message)
     message.reply = mocker.AsyncMock()
     message.from_user = mocker.Mock()
-    message.from_user.id = SUPER_USERS_TG_ID[0]
+    message.from_user.id = settings.SUPER_USERS_TG_ID[0]
     return message
 
 

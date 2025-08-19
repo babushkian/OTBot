@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import ViolationStatus
-from bot.constants import TG_GROUP_ID
+from bot.config import settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.keyboards.common_keyboards import generate_yes_no_keyboard
@@ -79,7 +79,7 @@ async def handle_violation_close_yes_no_response(message: types.Message, state: 
             # обратная связь зафиксировавшему нарушение и в группу
             await message.bot.send_message(chat_id=data["detector_tg"],
                                            text=f"Нарушение №{data["id"]} закрыто.")
-            await message.bot.send_message(chat_id=TG_GROUP_ID,
+            await message.bot.send_message(chat_id=settings.TG_GROUP_ID,
                                            text=f"Нарушение №{data["id"]} закрыто.")
 
             log.success("Violation data {violation} updated to {new_status}", violation=data["id"],

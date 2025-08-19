@@ -4,8 +4,7 @@ from aiogram import Router, types
 from aiogram.types import FSInputFile
 from aiogram.filters import Command, CommandStart
 
-from bot.config import BASEDIR
-from bot.constants import TG_GROUP_ID
+from bot.config import BASEDIR, settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.set_bot_commands import set_bot_commands
@@ -38,7 +37,7 @@ async def command_instruction(message: types.Message,
     """Получение инструкции по использованию."""
     if access_denied:
         msg = (f"У вас нет доступа к этой команде. Проверьте свою регистрацию командой /start. "
-               f"Убедитесь, что состоите в группе {TG_GROUP_ID}, иначе обратитесь к администратору бота.")
+               f"Убедитесь, что состоите в группе {settings.TG_GROUP_ID}, иначе обратитесь к администратору бота.")
         await message.answer(msg)
         log.warning("Пользователь без доступа с tg_id {user_id} запросил инструкцию.",
                     user_id=message.from_user.id)
