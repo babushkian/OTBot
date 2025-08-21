@@ -14,42 +14,6 @@ from bot.middlewares.user_middleware import UserCheckMiddleware
 router = Router(name=__name__)
 
 # регистрация middleware
-# common_handler
-common_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-common_handlers_router.message.middleware.register(UserCheckMiddleware())
-
-# base_commands handler
-main_base_commands_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-main_base_commands_router.message.middleware.register(UserCheckMiddleware())
-
-# approve_handler
-approve_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-approve_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-approve_handlers_router.message.middleware.register(UserCheckMiddleware())
-
-# ara_handler
-area_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-area_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-area_handlers_router.message.middleware.register(UserCheckMiddleware())
-
-# detection_handler
-detection_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-detection_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-detection_handlers_router.message.middleware.register(UserCheckMiddleware())
-detection_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
-
-# report_handler
-reports_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-reports_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-reports_handlers_router.message.middleware.register(UserCheckMiddleware())
-reports_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
-
-# violation_handler
-violation_handlers_router.message.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-violation_handlers_router.callback_query.middleware.register(DbSessionMiddleware(session_pool=async_session_factory))
-violation_handlers_router.message.middleware.register(UserCheckMiddleware())
-violation_handlers_router.callback_query.middleware.register(UserCheckMiddleware())
-
 router.include_routers(
     main_base_commands_router,
     common_handlers_router,
@@ -59,3 +23,7 @@ router.include_routers(
     reports_handlers_router,
     violation_handlers_router,
 )
+router.message.middleware(DbSessionMiddleware(session_pool=async_session_factory))
+router.callback_query.middleware(DbSessionMiddleware(session_pool=async_session_factory))
+router.message.middleware(UserCheckMiddleware())
+router.callback_query.middleware(UserCheckMiddleware())

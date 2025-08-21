@@ -120,8 +120,7 @@ async def handle_get_violation_photo(message: types.Message,
         return
     group_description = group_caption.get(media_group_id)
     description = message.caption or group_description or "Без описания"
-    if group_description:
-        group_caption.pop(media_group_id)
+    group_caption.pop(media_group_id, None)
 
     if merged_photos:
         # несколько объединённых фото
