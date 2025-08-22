@@ -15,8 +15,10 @@ async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_o
 
 uniq_string = Annotated[str, mapped_column(unique=True, nullable=False)]
 
+class SimpleBase(DeclarativeBase):
+    pass
 
-class Base(AsyncAttrs, DeclarativeBase):
+class Base(AsyncAttrs, SimpleBase):
     """Базовый класс моделей."""
 
     __abstract__ = True
