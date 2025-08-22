@@ -345,7 +345,8 @@ async def handle_violation_review(
     """Обработчик для просмотра нарушения при одобрении."""
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
-    violation = await violation_repo.get_violation_by_id(callback_data.id)
+    # violation = await violation_repo.get_violation_by_id(callback_data.id)
+    violation = await violation_repo.get_violation_by_id_new(callback_data.id)
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
     await state.update_data(detector_tg=violation["detector"]["telegram_id"],
@@ -393,7 +394,8 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
         new_status = {"id": data["id"], "status": ViolationStatus.ACTIVE}
 
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
-        violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
+        # violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
+        violation_data = await violation_repo.get_violation_by_id_new(violation_id=data["id"])
         if success:
             # обратная связь зафиксировавшему нарушение
             await message.bot.send_message(chat_id=data["detector_tg"],

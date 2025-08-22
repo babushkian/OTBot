@@ -51,6 +51,49 @@ class ViolationRepository:
                     {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
                     | {"detector": violation.detector.to_dict()})
 
+
+
+    async def get_violation_by_id_new(self, violation_id: int) -> dict[str, Any] | None:
+        """Получение нарушения по id."""
+        try:
+            result = await self.session.execute(select(ViolationModel)
+                                                .where(ViolationModel.id == violation_id)
+                                                .options(joinedload(ViolationModel.area)
+                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         joinedload(ViolationModel.detector),
+                                                         joinedload(ViolationModel.files)
+                                                         ),
+                                                )
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            log.error("SQLAlchemyError getting violation with id {violation_id}", violation_id=violation_id)
+            log.exception(e)
+            return None
+        except Exception as e:
+            log.error("Error getting violation with id {violation_id}", violation_id=violation_id)
+            log.exception(e)
+            return None
+        else:
+            log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
+
+            # violation = result.scalar_one_or_none() # не работает почему-то
+            violation = result.scalars().first()
+            if not violation:
+                return None
+
+            for i in violation.files:
+                print(i.hash, i.path)
+
+            responsible_user = violation.area.responsible_user.to_dict() if violation.area.responsible_user else None
+            return (violation.to_dict() |
+                    {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
+                    | {"detector": violation.detector.to_dict()})
+
+
+
+
+
+
     async def get_all_violations(self) -> tuple[dict[str, Any], ...]:
         """Получение всех мест нарушения."""
         try:
