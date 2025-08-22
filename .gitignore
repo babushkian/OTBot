@@ -14,6 +14,5 @@ report.pdf
 *.jpg
 /typst/violation_images/*.jpg
 /typst/report.typ
-/bot/migration/versions/*.py
 /typst/typst.exe
 *.sqbpro
