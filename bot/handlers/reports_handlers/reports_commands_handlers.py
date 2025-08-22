@@ -105,7 +105,8 @@ async def handle_report_by_id(message: types.Message, state: FSMContext,
         return
 
     violation_repo = ViolationRepository(session)
-    violation = await violation_repo.get_violation_by_id(int(violation_id))
+    # violation = await violation_repo.get_violation_by_id(int(violation_id))
+    violation = await violation_repo.get_violation_by_id_new(int(violation_id))
 
     if violation is None:
         await message.answer("Не удалось найти отчёт по указанному номеру нарушения.")

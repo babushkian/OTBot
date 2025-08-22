@@ -28,7 +28,8 @@ async def handle_violation_close(callback: types.CallbackQuery,
     """Обработчик для просмотра нарушения."""
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
-    violation = await violation_repo.get_violation_by_id(callback_data.id)
+    # violation = await violation_repo.get_violation_by_id(callback_data.id)
+    violation = await violation_repo.get_violation_by_id_new(callback_data.id)
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
 
