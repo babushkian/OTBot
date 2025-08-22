@@ -1,11 +1,14 @@
 """Модели OTBot."""
 
-from sqlalchemy import TEXT, BIGINT, String, ForeignKey, LargeBinary, true, false
-from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy import TEXT, BIGINT, String, ForeignKey, LargeBinary, true, false, TIMESTAMP, func
+from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
 from sqlalchemy.dialects.sqlite import JSON
+from datetime import datetime
 
 from bot.enums import UserRole, ViolationStatus
-from bot.db.database import Base
+from bot.db.database import Base, SimpleBase
+
+
 
 
 class UserModel(Base):
@@ -40,14 +43,38 @@ class ViolationModel(Base):
     area: Mapped["AreaModel"] = relationship("AreaModel", back_populates="violations")
 
     picture: Mapped[bytes] = mapped_column(LargeBinary)
+    picture_hash: Mapped[str] = mapped_column(String(64), nullable=True)
     description: Mapped[str] = mapped_column(String(200))
     status: Mapped[ViolationStatus] = mapped_column(default=ViolationStatus.ACTIVE)
     category: Mapped[str]
     actions_needed: Mapped[str] = mapped_column(TEXT)  # Мероприятия по устранению нарушения
+    files: Mapped[list["FileModel"]] = relationship(secondary="violation_files", back_populates="violations")
 
     def __str__(self) -> str:
         """Строковое представление."""
         return self.__class__.__name__ + f"({self.description})"
+
+
+class FileModel(SimpleBase):
+    """Файлы изображений, прикрепляемые к нарушениям."""
+
+    __tablename__ = "filemodel"
+
+    # используем хэш как уникальный ключ
+    hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    path: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
+    violations: Mapped[list["ViolationModel"]] = relationship(secondary="violation_files", back_populates="files")
+
+
+class ViolationFile(SimpleBase):
+    """Связка между нарушением и файлом."""
+
+    __tablename__ = "violation_files"
+
+    violation_id: Mapped[int] = mapped_column(ForeignKey("violationmodel.id"), primary_key=True)
+    file_hash: Mapped[str] = mapped_column(ForeignKey("filemodel.hash"), primary_key=True)
+
 
 
 class AreaModel(Base):
