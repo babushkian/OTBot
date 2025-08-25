@@ -12,7 +12,7 @@ from logger_config import log
 from bot.keyboards.common_keyboards import generate_yes_no_keyboard
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.violation_handlers.states import ViolationCloseStates
-from bot.handlers.reports_handlers.create_reports import create_typst_report
+from bot.handlers.reports_handlers.create_reports import create_typst_report, create_typst_report_new
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ViolationsFactory, ViolationsActionFactory
 
@@ -32,13 +32,17 @@ async def handle_violation_close(callback: types.CallbackQuery,
     violation = await violation_repo.get_violation_by_id_new(callback_data.id)
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
-    await state.update_data(detector_tg=violation["detector"]["telegram_id"],
-                            description=violation["description"],
-                            area=violation["area"]["name"])
+    # await state.update_data(detector_tg=violation["detector"]["telegram_id"],
+    #                         description=violation["description"],
+    #                         area=violation["area"]["name"])
+
+    await state.update_data(detector_tg=violation.detector.telegram_id,
+                            description=violation.description,
+                            area=violation.area.name)
 
     # отправка акта нарушения для проверки перед закрытием
-    pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
-    caption = f"Место: {violation['area']['name']}\nОписание: {violation['description']}"
+    pdf_file = create_typst_report_new(violations=(violation,), created_by=group_user)
+    caption = f"Место: {violation.area.name}\nОписание: {violation.description}"
     document = FSInputFile(pdf_file)
     user_tg = callback.from_user.id
 
