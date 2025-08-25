@@ -65,7 +65,6 @@ class ViolationRepository:
                                                          ),
                                                 )
         except SQLAlchemyError as e:
-            await self.session.rollback()
             log.error("SQLAlchemyError getting violation with id {violation_id}", violation_id=violation_id)
             log.exception(e)
             return None
@@ -80,17 +79,9 @@ class ViolationRepository:
             violation = result.scalars().first()
             if not violation:
                 return None
-
             for i in violation.files:
                 print(i.hash, i.path)
-
-            responsible_user = violation.area.responsible_user.to_dict() if violation.area.responsible_user else None
-            return (violation.to_dict() |
-                    {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
-                    | {"detector": violation.detector.to_dict()})
-
-
-
+            return violation
 
 
 
