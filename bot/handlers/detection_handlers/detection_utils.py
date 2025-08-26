@@ -3,6 +3,8 @@ from io import BytesIO
 
 from PIL import Image
 
+from bot.enums import ImgOrientation
+
 
 async def merge_images(image_bytes_list: list[bytes], gap: int = 10) -> BytesIO:
     """Склеивает 1-4 фото в квадрат 2x2 с зазором между фото."""
@@ -37,3 +39,9 @@ async def merge_images(image_bytes_list: list[bytes], gap: int = 10) -> BytesIO:
     new_img.save(output, format="JPEG")
     output.seek(0)
     return output
+
+def get_image_orientation(image: Image):
+    """Определяет ориентацию изображения для последуюшей компоновки в отчете."""
+
+    width, height = image.size
+    return ImgOrientation.VERT if height > width else ImgOrientation.HORIZ

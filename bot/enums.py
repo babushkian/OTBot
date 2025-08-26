@@ -19,3 +19,9 @@ class ViolationStatus(StrEnum):
     ACTIVE = "активно"
     CORRECTED = "устранено"
     REJECTED = "отклонено"
+
+class ImgOrientation(StrEnum):
+    """Статусы нарушений."""
+
+    VERT = "вертикальная"
+    HORIZ = "горизонтальная"

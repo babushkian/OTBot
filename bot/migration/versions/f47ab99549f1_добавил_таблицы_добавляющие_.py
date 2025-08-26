@@ -1,8 +1,8 @@
-"""добавил две таблицы: файлы и их связь с нарушениями.
+"""Добавил таблицы, добавляющие прикрепленные изобрадения в модель
 
-Revision ID: fb3bd500c7ff
+Revision ID: f47ab99549f1
 Revises: 0b5cef9673cd
-Create Date: 2025-08-22 15:49:15.072434
+Create Date: 2025-08-26 09:31:43.922345
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fb3bd500c7ff'
+revision: str = 'f47ab99549f1'
 down_revision: Union[str, None] = '0b5cef9673cd'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.create_table('filemodel',
     sa.Column('hash', sa.String(length=64), nullable=False),
     sa.Column('path', sa.String(length=255), nullable=False),
+    sa.Column('orientation', sa.Enum('VERT', 'HORIZ', name='imgorintation'), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.PrimaryKeyConstraint('hash')
     )

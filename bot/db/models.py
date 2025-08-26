@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
 from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime
 
-from bot.enums import UserRole, ViolationStatus
+from bot.enums import UserRole, ViolationStatus, ImgOrientation
 from bot.db.database import Base, SimpleBase
 
 
@@ -63,6 +63,7 @@ class FileModel(SimpleBase):
     # используем хэш как уникальный ключ
     hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     path: Mapped[str] = mapped_column(String(255), nullable=False)
+    orientation: Mapped[ImgOrientation]
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     violations: Mapped[list["ViolationModel"]] = relationship(secondary="violation_files", back_populates="files")
 
