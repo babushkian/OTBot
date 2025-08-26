@@ -1,5 +1,5 @@
 """Репозитории зарегистрированного нарушения."""
-from typing import Any
+from typing import Any, Sequence
 from datetime import datetime
 
 from sqlalchemy import delete, select, update, between
@@ -50,8 +50,6 @@ class ViolationRepository:
             return violation
 
 
-
-
     async def get_all_violations(self) -> tuple[dict[str, Any], ...]:
         """Получение всех мест нарушения."""
         try:
@@ -71,7 +69,6 @@ class ViolationRepository:
             return tuple()
         else:
             violations = result.scalars().all()
-
             log.success("{col} violations found successfully", col=len(violations))
             return violations
 
@@ -131,25 +128,24 @@ class ViolationRepository:
             await self.session.rollback()
             log.error("SQLAlchemyError deleting violation with id {violation}", violation=violation_id)
             log.exception(e)
-            return
         except Exception as e:
             log.error("Error deleting violation with id {violation}", violation=violation_id)
             log.exception(e)
-            return
         else:
             log.success("Violation with id {violation} deleted successfully", violation=violation_id)
+        return None
 
-    async def get_not_reviewed_violations(self) -> tuple[dict[str, Any], ...] | None:
+
+    async def get_not_reviewed_violations(self) -> Sequence[ViolationModel] | None:
         """Получение всех непроверенных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
-                                                .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
-                                                         joinedload(ViolationModel.detector),
-                                                         )
-                                                .where(ViolationModel.status == ViolationStatus.REVIEW))
+                                .options(joinedload(ViolationModel.area).joinedload(AreaModel.responsible_user),
+                                         joinedload(ViolationModel.detector),
+                                         selectinload(ViolationModel.files),
+                                         )
+                                .where(ViolationModel.status == ViolationStatus.REVIEW))
         except SQLAlchemyError as e:
-            await self.session.rollback()
             log.error("SQLAlchemyError getting not reviewed violations")
             log.exception(e)
             return None
@@ -159,16 +155,8 @@ class ViolationRepository:
             return None
         else:
             log.success("Not reviewed violations found successfully")
-            violations = tuple(result.scalars().all())
-            return tuple([
-                (violation.to_dict() |
-                 {
-                     "area": violation.area.to_dict() | {
-                         "responsible_user": violation.area.responsible_user.to_dict()
-                         if violation.area.responsible_user else None},
-                 }
-                 | {"detector": violation.detector.to_dict()}) for violation in violations
-            ])
+            return result.unique().scalars().all()
+
 
     async def get_active_violations(self) -> tuple[dict[str, Any], ...] | None:
         """Получение всех активных нарушений."""
@@ -200,6 +188,7 @@ class ViolationRepository:
                  }
                  | {"detector": violation.detector.to_dict()}) for violation in violations
             ])
+
 
     async def get_all_violations_by_date(self,
                                          start_date: datetime,

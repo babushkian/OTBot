@@ -30,6 +30,7 @@ async def handle_report_type_select(callback: types.CallbackQuery,
                                     session: AsyncSession,
                                     ) -> None:
     """Обработка выбора типа отчёта."""
+    violation_repo = ViolationRepository(session)
     match callback_data.type:
         case "by_id":
             await callback.message.answer("Введите номер нарушения:", reply_markup=generate_cancel_button())
@@ -52,24 +53,22 @@ async def handle_report_type_select(callback: types.CallbackQuery,
             log.debug("User {user} selected report type 'sum'.", user=group_user.first_name)
 
         case "active":
-            violation_repo = ViolationRepository(session)
-            # violations = await violation_repo.get_active_violations()
             violations = await violation_repo.get_active_violations_new()
-            # result_report = create_typst_report_new(violations=violations,
-            #                                     created_by=group_user)
-            # document = FSInputFile(result_report)
-            # await callback.message.bot.send_document(chat_id=callback.from_user.id,
-            #                                          document=document,
-            #                                          caption="Отчёт.")
+            result_report = create_typst_report_new(violations=violations,
+                                                created_by=group_user)
+            document = FSInputFile(result_report)
+            await callback.message.bot.send_document(chat_id=callback.from_user.id,
+                                                     document=document,
+                                                     caption="Отчёт.")
             await callback.message.answer("Отчёт сгенерирован.")
             await state.clear()
 
             log.debug("User {user} selected report type 'active'.", user=group_user.first_name)
 
         case "review":
-            violation_repo = ViolationRepository(session)
             violations = await violation_repo.get_not_reviewed_violations()
-            result_report = create_typst_report(violations=violations,
+            print(violations)
+            result_report = create_typst_report_new(violations=violations,
                                                 created_by=group_user)
             document = FSInputFile(result_report)
             await callback.message.bot.send_document(chat_id=callback.from_user.id,
@@ -81,7 +80,6 @@ async def handle_report_type_select(callback: types.CallbackQuery,
             log.debug("User {user} selected report type 'review'.", user=group_user.first_name)
 
         case "stat":
-            violation_repo = ViolationRepository(session)
             violations = await violation_repo.get_all_violations()
             report = create_static_report(violations=violations)
             document = BufferedInputFile(report, filename="static_report.xlsx")
