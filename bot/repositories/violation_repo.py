@@ -19,7 +19,7 @@ class ViolationRepository:
         """Инициализация репозитория нарушения."""
         self.session = session
 
-    async def get_violation_by_id(self, violation_id: int) -> dict[str, Any] | None:
+    async def get_violation_by_id(self, violation_id: int) -> ViolationModel | None:
         """Получение нарушения по id."""
         print("Получение нарушения по id.")
         try:
@@ -50,7 +50,7 @@ class ViolationRepository:
             return violation
 
 
-    async def get_all_violations(self) -> tuple[dict[str, Any], ...]:
+    async def get_all_violations(self) -> Sequence[ViolationModel] | None:
         """Получение всех мест нарушения."""
         try:
             result = await self.session.execute(select(ViolationModel)
@@ -158,17 +158,17 @@ class ViolationRepository:
             return result.unique().scalars().all()
 
 
-    async def get_active_violations(self) -> tuple[dict[str, Any], ...] | None:
+    async def get_active_violations(self) -> Sequence[ViolationModel]| None:
         """Получение всех активных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel)
                                                 .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         .joinedload(AreaModel.responsible_user),
                                                          joinedload(ViolationModel.detector),
+                                                         selectinload(ViolationModel.files),
                                                          )
                                                 .where(ViolationModel.status == ViolationStatus.ACTIVE))
         except SQLAlchemyError as e:
-            await self.session.rollback()
             log.error("SQLAlchemyError getting active violations")
             log.exception(e)
             return None
@@ -178,16 +178,8 @@ class ViolationRepository:
             return None
         else:
             log.success("Active violations found successfully")
-            violations = tuple(result.scalars().all())
-            return tuple([
-                (violation.to_dict() |
-                 {
-                     "area": violation.area.to_dict() | {
-                         "responsible_user": violation.area.responsible_user.to_dict()
-                         if violation.area.responsible_user else None},
-                 }
-                 | {"detector": violation.detector.to_dict()}) for violation in violations
-            ])
+            violations = result.unique().scalars().all()
+            return violations
 
 
     async def get_all_violations_by_date(self,

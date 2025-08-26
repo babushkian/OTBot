@@ -53,7 +53,7 @@ async def handle_report_type_select(callback: types.CallbackQuery,
             log.debug("User {user} selected report type 'sum'.", user=group_user.first_name)
 
         case "active":
-            violations = await violation_repo.get_active_violations_new()
+            violations = await violation_repo.get_active_violations()
             result_report = create_typst_report_new(violations=violations,
                                                 created_by=group_user)
             document = FSInputFile(result_report)
