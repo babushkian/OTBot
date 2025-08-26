@@ -83,7 +83,6 @@ async def handle_report_type_select(callback: types.CallbackQuery,
         case "stat":
             violation_repo = ViolationRepository(session)
             violations = await violation_repo.get_all_violations()
-
             report = create_static_report(violations=violations)
             document = BufferedInputFile(report, filename="static_report.xlsx")
             caption = "Итоговый расчёт за весь период."

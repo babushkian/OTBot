@@ -104,10 +104,6 @@ def create_typst_report_new(created_by: UserModel,
 
 
 
-
-
-
-
 def create_static_report(violations: tuple) -> bytes:
     """Создание статистического отчёта xlsx."""
     # TODO добавить период выгрузки для violations после получения достаточного объема данных
@@ -133,31 +129,28 @@ def create_static_report(violations: tuple) -> bytes:
     # данные полного отчёта
     for violation in violations:
         full_report_ws.append([
-            violation["id"],
-            violation["area"]["name"],
-            violation.get("description", ""),
-            violation["area"]["responsible_user"]["first_name"] if violation["area"]["responsible_user_id"] else
-            violation["area"][
-                "responsible_text"],
-            violation["category"],
-            violation["actions_needed"],
-            violation["status"].value,
-            violation["created_at"].strftime("%d.%m.%Y %H:%M:%S"),
-            violation["updated_at"].strftime("%d.%m.%Y %H:%M:%S") if violation["status"].name == "CORRECTED" else "",
-            f"ФИО: {violation["detector"]["first_name"]} Роль:{violation["detector"]["user_role"]}",
+            violation.id,
+            violation.area.name,
+            violation.description,
+            violation.area.responsible_user.first_name if violation.area.responsible_user_id else (
+                violation.area.responsible_text),
+            violation.category,
+            violation.actions_needed,
+            violation.status,
+            violation.created_at.strftime("%d.%m.%Y %H:%M:%S"),
+            violation.updated_at.strftime("%d.%m.%Y %H:%M:%S") if violation.status == ViolationStatus.CORRECTED else "",
+            f"ФИО: {violation.detector.first_name} Роль:{violation.detector.user_role}",
         ])
 
     # отчёт по каждому месту нарушения
     area_report_data = {}
-    # TODO tests использовать для дальнейшего добавления видов отчётов
-    # vis = [{k: v for k, v in violation.items() if k != "picture"} for violation in violations]
-    # pprint(vis)
 
     for violation in violations:
-        area_name = violation["area"]["name"]
-        responsible = violation["area"]["responsible_user"]["first_name"] if violation["area"]["responsible_user_id"] \
-            else violation["area"]["responsible_text"]
-        status = violation["status"].value
+        area_name = violation.area.name
+        responsible = violation.area.responsible_user.first_name if violation.area.responsible_user_id else (
+            violation.area.responsible_text)
+        status = violation.status
+        # status = violation["status"].value
 
         if area_name not in area_report_data:
             area_report_data[area_name] = {"violations": defaultdict(int)}

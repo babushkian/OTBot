@@ -51,15 +51,15 @@ class ViolationRepository:
 
 
 
+
     async def get_all_violations(self) -> tuple[dict[str, Any], ...]:
         """Получение всех мест нарушения."""
         try:
             result = await self.session.execute(select(ViolationModel)
-                                                .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
-                                                         joinedload(ViolationModel.detector),
-                                                         ),
-                                                )
+                        .options(joinedload(ViolationModel.area).joinedload(AreaModel.responsible_user),
+                                 joinedload(ViolationModel.detector),
+                                 )
+                        )
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting violations")
@@ -70,18 +70,11 @@ class ViolationRepository:
             log.exception(e)
             return tuple()
         else:
-            violations = tuple(result.scalars().all())
-            log.success("{col} violations found successfully", col=len(violations))
+            violations = result.scalars().all()
 
-            return tuple([
-                (violation.to_dict() |
-                 {
-                     "area": violation.area.to_dict() | {
-                         "responsible_user": violation.area.responsible_user.to_dict()
-                         if violation.area.responsible_user else None},
-                 }
-                 | {"detector": violation.detector.to_dict()}) for violation in violations
-            ])
+            log.success("{col} violations found successfully", col=len(violations))
+            return violations
+
 
     async def add_violation(self, violation: ViolationModel) -> ViolationModel | None:
         """Добавление нарушения."""
