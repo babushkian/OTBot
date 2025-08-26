@@ -32,9 +32,6 @@ async def handle_violation_close(callback: types.CallbackQuery,
     violation = await violation_repo.get_violation_by_id_new(callback_data.id)
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
-    # await state.update_data(detector_tg=violation["detector"]["telegram_id"],
-    #                         description=violation["description"],
-    #                         area=violation["area"]["name"])
 
     await state.update_data(detector_tg=violation.detector.telegram_id,
                             description=violation.description,

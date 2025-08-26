@@ -1,6 +1,6 @@
 """Утилиты при обнаружении нарушения."""
 from io import BytesIO
-
+from pathlib import Path
 from PIL import Image
 
 from bot.enums import ImgOrientation
@@ -45,3 +45,12 @@ def get_image_orientation(image: Image):
 
     width, height = image.size
     return ImgOrientation.VERT if height > width else ImgOrientation.HORIZ
+
+def get_file(path: Path) -> bytes:
+    """Возвращает тело файла по его пути."""
+
+    with open(path, "rb") as file:
+        return file.read()
+
+
+
