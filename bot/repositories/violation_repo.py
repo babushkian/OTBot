@@ -184,16 +184,17 @@ class ViolationRepository:
 
     async def get_all_violations_by_date(self,
                                          start_date: datetime,
-                                         end_date: datetime) -> tuple[dict[str, Any], ...]:
+                                         end_date: datetime) -> Sequence[ViolationModel]| None:
         """Получение нарешений в периоде дет."""
         try:
             result = await self.session.execute(select(ViolationModel).order_by(ViolationModel.id)
-                                                .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
-                                                         joinedload(ViolationModel.detector),
-                                                         )
-                                                .where(between(ViolationModel.created_at, start_date, end_date)),
-                                                )
+                                            .options(joinedload(ViolationModel.area)
+                                                     .joinedload(AreaModel.responsible_user),
+                                                     joinedload(ViolationModel.detector),
+                                                     selectinload(ViolationModel.files),
+                                                     )
+                                            .where(between(ViolationModel.created_at, start_date, end_date)),
+                                            )
         except SQLAlchemyError as e:
             await self.session.rollback()
             log.error("SQLAlchemyError getting violations")
@@ -204,28 +205,21 @@ class ViolationRepository:
             log.exception(e)
             return None
         else:
-            violations = tuple(result.scalars().all())
+            violations = result.unique().scalars().all()
             log.success("{col} violations found successfully", col=len(violations))
 
-            return tuple([
-                (violation.to_dict() |
-                 {
-                     "area": violation.area.to_dict() | {
-                         "responsible_user": violation.area.responsible_user.to_dict()
-                         if violation.area.responsible_user_id else None},
-                 }
-                 | {"detector": violation.detector.to_dict()}) for violation in violations
-            ])
+            return violations
 
     async def get_all_active_violations_by_date(self,
                                                 start_date: datetime,
-                                                end_date: datetime) -> tuple[dict[str, Any], ...]:
+                                                end_date: datetime) -> Sequence[ViolationModel]| None:
         """Получение нарешений в периоде дет."""
         try:
             result = await self.session.execute(select(ViolationModel).order_by(ViolationModel.id)
                                                 .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
+                                                         .joinedload(AreaModel.responsible_user),
                                                          joinedload(ViolationModel.detector),
+                                                         selectinload(ViolationModel.files),
                                                          )
                                                 .where(between(ViolationModel.created_at, start_date, end_date))
                                                 .where(ViolationModel.status == ViolationStatus.ACTIVE),
@@ -240,26 +234,18 @@ class ViolationRepository:
             log.exception(e)
             return None
         else:
-            violations = tuple(result.scalars().all())
+            violations = result.unique().scalars().all()
             log.success("{col} violations found successfully", col=len(violations))
 
-            return tuple([
-                (violation.to_dict() |
-                 {
-                     "area": violation.area.to_dict() | {
-                         "responsible_user": violation.area.responsible_user.to_dict()
-                         if violation.area.responsible_user_id else None},
-                 }
-                 | {"detector": violation.detector.to_dict()}) for violation in violations
-            ])
+            return violations
 
-    async def get_active_violations_id_description(self) -> tuple[dict[str, Any], ...] | None:
+
+    async def get_active_violations_id_description(self) -> Sequence[ViolationModel]| None | None:
         """Получение всех активных нарушений."""
         try:
             result = await self.session.execute(select(ViolationModel.id, ViolationModel.description)
                                                 .where(ViolationModel.status == ViolationStatus.ACTIVE))
         except SQLAlchemyError as e:
-            await self.session.rollback()
             log.error("SQLAlchemyError getting active violations")
             log.exception(e)
             return None

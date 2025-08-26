@@ -186,7 +186,7 @@ async def handle_report_sum(callback: types.CallbackQuery,
         return
 
     try:
-        result_report = create_typst_report(violations=violations,
+        result_report = create_typst_report_new(violations=violations,
                                             created_by=group_user)
         document = FSInputFile(result_report)
         await callback.message.bot.send_document(chat_id=callback.from_user.id,
@@ -228,7 +228,7 @@ async def handle_report_range(message: types.Message,
     if not violations:
         await message.answer("В выбранном периоде отчёт пуст.")
         return
-    result_report = create_typst_report(violations=violations,
+    result_report = create_typst_report_new(violations=violations,
                                         created_by=group_user)
     document = FSInputFile(result_report)
     await message.bot.send_document(chat_id=message.from_user.id,
