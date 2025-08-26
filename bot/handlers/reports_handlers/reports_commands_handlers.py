@@ -14,7 +14,8 @@ from bot.keyboards.common_keyboards import generate_cancel_button
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.reports_handlers.states import ReportStates
 from bot.handlers.reports_handlers.reports_utils import validate_date_interval
-from bot.handlers.reports_handlers.create_reports import create_typst_report, create_static_report
+from bot.handlers.reports_handlers.create_reports import create_typst_report, create_static_report, \
+    create_typst_report_new
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ReportTypeFactory, ReportPeriodFactory
 
@@ -52,13 +53,14 @@ async def handle_report_type_select(callback: types.CallbackQuery,
 
         case "active":
             violation_repo = ViolationRepository(session)
-            violations = await violation_repo.get_active_violations()
-            result_report = create_typst_report(violations=violations,
-                                                created_by=group_user)
-            document = FSInputFile(result_report)
-            await callback.message.bot.send_document(chat_id=callback.from_user.id,
-                                                     document=document,
-                                                     caption="Отчёт.")
+            # violations = await violation_repo.get_active_violations()
+            violations = await violation_repo.get_active_violations_new()
+            # result_report = create_typst_report_new(violations=violations,
+            #                                     created_by=group_user)
+            # document = FSInputFile(result_report)
+            # await callback.message.bot.send_document(chat_id=callback.from_user.id,
+            #                                          document=document,
+            #                                          caption="Отчёт.")
             await callback.message.answer("Отчёт сгенерирован.")
             await state.clear()
 
@@ -107,7 +109,6 @@ async def handle_report_by_id(message: types.Message, state: FSMContext,
 
     violation_repo = ViolationRepository(session)
     violation = await violation_repo.get_violation_by_id(int(violation_id))
-    # violation = await violation_repo.get_violation_by_id_new(int(violation_id))
 
     if violation is None:
         await message.answer("Не удалось найти отчёт по указанному номеру нарушения.")
@@ -117,7 +118,7 @@ async def handle_report_by_id(message: types.Message, state: FSMContext,
         return
 
     try:
-        pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
+        pdf_file = create_typst_report_new(violations=(violation,), created_by=group_user)
         document = FSInputFile(pdf_file)
         caption = f"Нарушение №{violation_id}"
         await message.bot.send_document(chat_id=message.from_user.id,

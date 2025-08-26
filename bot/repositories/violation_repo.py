@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import delete, select, update, between
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.enums import ViolationStatus
@@ -21,47 +21,14 @@ class ViolationRepository:
 
     async def get_violation_by_id(self, violation_id: int) -> dict[str, Any] | None:
         """Получение нарушения по id."""
+        print("Получение нарушения по id.")
         try:
             result = await self.session.execute(select(ViolationModel)
                                                 .where(ViolationModel.id == violation_id)
                                                 .options(joinedload(ViolationModel.area)
                                                          .options(joinedload(AreaModel.responsible_user)),
                                                          joinedload(ViolationModel.detector),
-                                                         ),
-                                                )
-        except SQLAlchemyError as e:
-            await self.session.rollback()
-            log.error("SQLAlchemyError getting violation with id {violation_id}", violation_id=violation_id)
-            log.exception(e)
-            return None
-        except Exception as e:
-            log.error("Error getting violation with id {violation_id}", violation_id=violation_id)
-            log.exception(e)
-            return None
-        else:
-            log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
-
-            # TODO должно быть violation = result.scalar_one_or_none()
-            violation = result.scalars().first()
-            if not violation:
-                return None
-
-            responsible_user = violation.area.responsible_user.to_dict() if violation.area.responsible_user else None
-            return (violation.to_dict() |
-                    {"area": violation.area.to_dict() | {"responsible_user": responsible_user}}
-                    | {"detector": violation.detector.to_dict()})
-
-
-
-    async def get_violation_by_id_new(self, violation_id: int) -> dict[str, Any] | None:
-        """Получение нарушения по id."""
-        try:
-            result = await self.session.execute(select(ViolationModel)
-                                                .where(ViolationModel.id == violation_id)
-                                                .options(joinedload(ViolationModel.area)
-                                                         .options(joinedload(AreaModel.responsible_user)),
-                                                         joinedload(ViolationModel.detector),
-                                                         joinedload(ViolationModel.files)
+                                                         selectinload(ViolationModel.files)
                                                          ),
                                                 )
         except SQLAlchemyError as e:
@@ -74,9 +41,8 @@ class ViolationRepository:
             return None
         else:
             log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
+            violation = result.unique().scalar_one_or_none()
 
-            # violation = result.scalar_one_or_none() # не работает почему-то
-            violation = result.scalars().first()
             if not violation:
                 return None
             for i in violation.files:
