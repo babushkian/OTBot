@@ -18,6 +18,7 @@ from bot.constants import (
     action_needed_deadline,
 )
 from bot.db.models import UserModel, ViolationModel
+from bot.services.violation_service import ViolationService
 from logger_config import log
 from bot.repositories.area_repo import AreaRepository
 from bot.repositories.user_repo import UserRepository
@@ -26,7 +27,8 @@ from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
 from bot.handlers.reports_handlers.create_reports import create_typst_report, create_typst_report_new
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
-from bot.handlers.detection_handlers.detection_utils import merge_images, get_file
+from bot.handlers.detection_handlers.detection_utils import merge_images
+from bot.utils.image_utils import get_file
 from bot.keyboards.inline_keyboards.callback_factories import (
     AreaSelectFactory,
     ViolationsFactory,
@@ -132,7 +134,7 @@ async def handle_get_violation_photo(message: types.Message,
         file = await message.bot.get_file(file_id)
         picture = await message.bot.download_file(file.file_path)
 
-    await state.update_data(picture=picture.read(),
+    await state.update_data(images=[picture.read()],
                             description=description,
                             detector_id=group_user.id,
                             status=ViolationStatus.REVIEW)
@@ -268,7 +270,7 @@ async def handle_ok_button(callback: types.CallbackQuery,
     area_repo = AreaRepository(session)
     area = await area_repo.get_area_by_id(data["area_id"])
     # Отправляем фото
-    photo_file = BufferedInputFile(data["picture"], filename="photo.jpg")
+    photo_file = BufferedInputFile(data["images"][0], filename="photo.jpg")
     user_tg = callback.from_user.id
     caption = f"Вы отправили фото нарушения с описанием: {data['description']}"
     await callback.message.bot.send_photo(chat_id=user_tg, photo=photo_file, caption=caption)
@@ -296,17 +298,20 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
     data = await state.get_data()
     if message.text == "✅ Да":
         actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
-        violation_repo = ViolationRepository(session)
-        violation = ViolationModel(area_id=data["area_id"],
-                                   description=data["description"],
-                                   detector_id=data["detector_id"],
-                                   category=data["category"],
-                                   status=data["status"],
-                                   picture=data["picture"],
-                                   actions_needed=",\n".join(actions[index - 1]
-                                                             for index in data["actions_needed"]),
-                                   )
-        success = await violation_repo.add_violation(violation)
+
+        violation_service = ViolationService(session)
+        # violation_repo = ViolationRepository(session)
+        # violation = ViolationModel(area_id=data["area_id"],
+        #                            description=data["description"],
+        #                            detector_id=data["detector_id"],
+        #                            category=data["category"],
+        #                            status=data["status"],
+        #                            picture=data["picture"],
+        #                            actions_needed=",\n".join(actions[index - 1]
+        #                                                      for index in data["actions_needed"]),
+        #                            )
+        # success = await violation_repo.add_violation(violation)
+        success = await violation_service.add(data)
         if success:
             await message.answer(f"Данные нарушения №{success.id} сохранены.")
             log.success("Violation data {violation} added", violation=data["description"])
@@ -329,7 +334,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
 
         await state.clear()
 
-    elif message.text == "❌ Нет":
+    else:
         await message.answer("Заполнение отменено, для повторного вызовите команду /detect.")
         await state.clear()
         log.info("Violation data {user} update canceled", user=group_user.first_name)

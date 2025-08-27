@@ -8,7 +8,7 @@ import os
 import shutil
 from pathlib import Path
 
-from bot.handlers.detection_handlers.detection_utils import get_image_orientation
+from bot.utils.image_utils import get_image_orientation
 
 DATABASE_URL = "sqlite:///otbot.db"
 engine = create_engine(DATABASE_URL, echo=False)
