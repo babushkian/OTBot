@@ -98,43 +98,45 @@ async def process_media_group_after_delay(message: types.Message,
         return
 
     photos = media_groups.pop(media_group_id)
-    merged_photos = await merge_images(photos, gap=10)  # объединённое фото
 
-    await handle_get_violation_photo(message, state, group_user, session,
-                                     media_group_id,
-                                     merged_photos=merged_photos, )
+    # merged_photos = await merge_images(photos, gap=10)  # объединённое фото
+    await state.update_data(images=photos)
+    await state.set_state(DetectionStates.send_media_group)
+    await handle_get_violation_photo(message, state, group_user, session, media_group_id)
+
     media_group_timers.pop(media_group_id)
 
 
 
-@router.message(DetectionStates.send_photo)
+@router.message(F.state == DetectionStates.send_photo | F.state == DetectionStates.send_media_group)
 async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
                                      session: AsyncSession,
                                      media_group_id=None,
-                                     merged_photos: BytesIO | None = None,
                                      ) -> None:
     """Обрабатывает получение фото нарушения."""
 
-    if not message.photo:
-        await message.answer("Необходимо прикрепить фото нарушения.",
-                             reply_markup=generate_cancel_button())
-        return
+    # if not message.photo:
+    #     await message.answer("Необходимо прикрепить фото нарушения.", reply_markup=generate_cancel_button())
+    #     return
+
     group_description = group_caption.get(media_group_id)
     description = message.caption or group_description or "Без описания"
     group_caption.pop(media_group_id, None)
-
-    if merged_photos:
+    current_state = await state.get_state()
+    print(current_state)
+    if False:
         # несколько объединённых фото
-        picture = merged_photos
+        data = state.get_data()
+        images= data["images"]
     else:
         # одно фото
         file_id = message.photo[-1].file_id
         file = await message.bot.get_file(file_id)
         picture = await message.bot.download_file(file.file_path)
-
-    await state.update_data(images=[picture.read()],
+        images = [picture.read()]
+    await state.update_data(images=images,
                             description=description,
                             detector_id=group_user.id,
                             status=ViolationStatus.REVIEW)
@@ -300,17 +302,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
         actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
 
         violation_service = ViolationService(session)
-        # violation_repo = ViolationRepository(session)
-        # violation = ViolationModel(area_id=data["area_id"],
-        #                            description=data["description"],
-        #                            detector_id=data["detector_id"],
-        #                            category=data["category"],
-        #                            status=data["status"],
-        #                            picture=data["picture"],
-        #                            actions_needed=",\n".join(actions[index - 1]
-        #                                                      for index in data["actions_needed"]),
-        #                            )
-        # success = await violation_repo.add_violation(violation)
         success = await violation_service.add(data)
         if success:
             await message.answer(f"Данные нарушения №{success.id} сохранены.")
@@ -340,43 +331,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
         log.info("Violation data {user} update canceled", user=group_user.first_name)
 
 
-# @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
-# async def handle_violation_review(
-#     callback: types.CallbackQuery,
-#     callback_data: ViolationsFactory,
-#     state: FSMContext,
-#     session: AsyncSession,
-#     group_user: UserModel,
-# ) -> None:
-#     """Обработчик для просмотра нарушения при одобрении."""
-#     await state.update_data(id=callback_data.id)
-#     violation_repo = ViolationRepository(session)
-#     violation = await violation_repo.get_violation_by_id(callback_data.id)
-#     if violation is None:
-#         log.error("Не существует нарушения с id={id}", id=callback_data.id)
-#     await state.update_data(detector_tg=violation["detector"]["telegram_id"],
-#                             description=violation["description"],
-#                             area=violation["area"]["name"])
-#
-#     # отправка акта нарушения для review
-#     pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
-#
-#     caption = f"Место: {violation['area']['name']}\nОписание: {violation['description']}"
-#     document = FSInputFile(pdf_file)
-#     user_tg = callback.from_user.id
-#
-#     await callback.message.bot.send_document(chat_id=user_tg, document=document, caption=caption)
-#
-#     actions_to_kb = ({"action": "activate", "name": "Утвердить"},
-#                      {"action": "reject", "name": "Отклонить"})
-#     action_kb = await create_keyboard(items=actions_to_kb,
-#                                       text_key="name",
-#                                       callback_factory=ViolationsActionFactory)
-#
-#     await callback.message.answer("Выберите действие:", reply_markup=action_kb)
-#     await state.set_state(ViolationStates.review)
-#     await callback.answer("Выбрано действие.")
-#     log.debug("Пользователь {user} запустил процесс рассмотрения нарушения.", user=group_user.first_name)
 
 
 @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
@@ -418,8 +372,6 @@ async def handle_violation_review(
     log.debug("Пользователь {user} запустил процесс рассмотрения нарушения.", user=group_user.first_name)
 
 
-
-
 @router.callback_query(ViolationsActionFactory.filter(F.action == "activate"), ViolationStates.review)
 async def handle_violation_activate(callback: types.CallbackQuery,
                                     state: FSMContext) -> None:
@@ -428,60 +380,6 @@ async def handle_violation_activate(callback: types.CallbackQuery,
                                   reply_markup=generate_yes_no_keyboard())
     await state.set_state(ViolationStates.activate)
     await callback.answer("Выбрано действие утверждения.")
-
-
-# @router.message(ViolationStates.activate, F.text.in_(["✅ Да", "❌ Нет"]))
-# async def handle_detection_activation_yes_no_response(message: types.Message, state: FSMContext,
-#                                                       session: AsyncSession,
-#                                                       group_user: UserModel) -> None:
-#     """Обработчик для ответов "Да" или "Нет" при рассмотрении нарушения для одобрения."""
-#     data = await state.get_data()
-#     if message.text == "✅ Да":
-#         violation_repo = ViolationRepository(session)
-#         new_status = {"id": data["id"], "status": ViolationStatus.ACTIVE}
-#
-#         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
-#         violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
-#         if success:
-#             # обратная связь зафиксировавшему нарушение
-#             await message.bot.send_message(chat_id=data["detector_tg"],
-#                                            text=f"Нарушение №{data["id"]} одобрено администратором.")
-#
-#             # отправка в группу
-#             jpeg_file = violation_data["picture"]
-#             caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
-#             caption_pdf = f"Детали нарушения №{data['id']}"
-#
-#             pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
-#             document = FSInputFile(pdf_file)
-#
-#             try:
-#                 await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
-#                                                 document=BufferedInputFile(jpeg_file,
-#                                                                            filename=f"Нарушение №{data['id']}.jpg"),
-#                                                 caption=caption_jpeg)
-#                 await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
-#                                                 document=document,
-#                                                 caption=caption_pdf)
-#                 log.debug("Violation report {report} sent to group.", report=data["id"])
-#             except Exception as e:
-#                 log.error("Error sending violation report to group.")
-#                 log.exception(e)
-#
-#             log.success("Violation data {violation} updated to {new_status}", violation=data["id"],
-#                         new_status=ViolationStatus.ACTIVE.name)
-#             await message.answer("Нарушение отправлено группу.")
-#
-#         else:
-#             await message.answer("Возникла ошибка. Попробуйте позже.")
-#             log.error("Error updating violation data {violation}", violation=data["id"])
-#
-#         await state.clear()
-#
-#     elif message.text == "❌ Нет":
-#         await message.answer("Действие отменено, для повторного вызовите команду /check.")
-#         await state.clear()
-#         log.info("Violation data {user} update canceled", user=group_user.first_name)
 
 
 @router.message(ViolationStates.activate, F.text.in_(["✅ Да", "❌ Нет"]))

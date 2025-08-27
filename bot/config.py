@@ -35,4 +35,4 @@ settings = Settings()
 
 BASEDIR = settings.BASE_DIR
 REPORTS_DIR = BASEDIR / "violations"
-IMAGE_DIR = BASEDIR / Path("images")
+IMAGE_DIR = Path("images")

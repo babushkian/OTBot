@@ -22,7 +22,9 @@ class ViolationService:
                            detector_id=data["detector_id"],
                            category=data["category"],
 
+
                            picture=data["images"][0],
+
 
                            status=data["status"],
                            actions_needed=",\n".join(actions[index - 1] for index in data["actions_needed"]),
@@ -30,7 +32,7 @@ class ViolationService:
         for image in data["images"]:
             image_info = handle_image(image)
             img_file = FileModel(**asdict(image_info))
-            self.images.add(img_file)
+            await self.images.add(img_file)
         success = await self.violations.add_violation(violation)
         return success
 

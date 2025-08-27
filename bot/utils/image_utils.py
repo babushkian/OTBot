@@ -16,7 +16,7 @@ class ImageInfo:
     """Объект, в котором передается информация о сохраненном изображении."""
 
     hash: str
-    path: Path
+    path: str
     orientation: ImgOrientation
 
 
@@ -49,7 +49,7 @@ def handle_image(image: bytes) ->ImageInfo:
     img_hash = get_hash(image)
     orientation = get_image_orientation(image)
     path = save_image(image, img_hash)
-    return ImageInfo(hash=img_hash, path=path, orientation=orientation)
+    return ImageInfo(hash=img_hash, path=str(path), orientation=orientation)
 
 
 def get_file(path: Path) -> bytes:

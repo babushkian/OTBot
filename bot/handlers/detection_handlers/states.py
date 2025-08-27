@@ -7,6 +7,7 @@ class DetectionStates(StatesGroup):
 
     start = State()
     send_photo = State()
+    send_media_group = State()
     enter_area = State()
     next_layer_select_category = State()
 
