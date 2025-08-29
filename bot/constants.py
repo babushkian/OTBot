@@ -55,7 +55,7 @@ def action_needed_deadline() -> tuple[dict[str, str], ...]:
 # максимальное количество фото
 MAX_SEND_PHOTO = 4
 # время ожидания в секундах загрузки каждого фото когда пользователь отправляет несколько фото
-MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 2
+MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 0.5
 
 
 VIOLATION_CATEGORY_JSON_FILE = BASEDIR / Path("bot") / Path("keyboards") / Path("category_buttons.json")

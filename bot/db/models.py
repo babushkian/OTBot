@@ -25,8 +25,8 @@ class UserModel(Base):
     telegram_data: Mapped[dict | None] = mapped_column(JSON)  # данные из telegram
     user_description: Mapped[str | None]
 
-    responsible_area: Mapped[list["AreaModel"]] = relationship("AreaModel", back_populates="responsible_user")
-    violations: Mapped[list["ViolationModel"]] = relationship("ViolationModel", back_populates="detector")
+    responsible_area: Mapped[list["AreaModel"]] = relationship("AreaModel", back_populates="responsible_user", lazy="selectin")
+    violations: Mapped[list["ViolationModel"]] = relationship("ViolationModel", back_populates="detector", lazy="selectin")
 
     def __str__(self) -> str:
         """Строковое представление."""
@@ -37,10 +37,10 @@ class ViolationModel(Base):
     """Модель обнаруженных нарушений."""
 
     detector_id: Mapped[int] = mapped_column(ForeignKey("usermodel.id", name="fk_detector_user_id"))
-    detector: Mapped["UserModel"] = relationship("UserModel", back_populates="violations")
+    detector: Mapped["UserModel"] = relationship("UserModel", back_populates="violations", lazy="selectin")
 
     area_id: Mapped[int] = mapped_column(ForeignKey("areamodel.id", name="fk_violation_area_id"))
-    area: Mapped["AreaModel"] = relationship("AreaModel", back_populates="violations")
+    area: Mapped["AreaModel"] = relationship("AreaModel", back_populates="violations", lazy="selectin")
 
     picture: Mapped[bytes] = mapped_column(LargeBinary)
     picture_hash: Mapped[str] = mapped_column(String(64), nullable=True)
@@ -48,7 +48,8 @@ class ViolationModel(Base):
     status: Mapped[ViolationStatus] = mapped_column(default=ViolationStatus.ACTIVE)
     category: Mapped[str]
     actions_needed: Mapped[str] = mapped_column(TEXT)  # Мероприятия по устранению нарушения
-    files: Mapped[list["FileModel"]] = relationship(secondary="violation_files", back_populates="violations")
+    files: Mapped[list["FileModel"]] = relationship(secondary="violation_files", back_populates="violations",
+                                                    lazy="selectin")
 
     def __str__(self) -> str:
         """Строковое представление."""
@@ -65,7 +66,8 @@ class FileModel(SimpleBase):
     path: Mapped[str] = mapped_column(String(255), nullable=False)
     orientation: Mapped[ImgOrientation]
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    violations: Mapped[list["ViolationModel"]] = relationship(secondary="violation_files", back_populates="files")
+    violations: Mapped[list["ViolationModel"]] = relationship(secondary="violation_files", back_populates="files",
+                                                              lazy="selectin")
 
 
 class ViolationFile(SimpleBase):
@@ -83,12 +85,12 @@ class AreaModel(Base):
 
     name: Mapped[str] = mapped_column(unique=True, info={"verbose_name": "Имя места"})
     description: Mapped[str | None] = mapped_column(info={"verbose_name": "Описание места"})
-    violations: Mapped[list["ViolationModel"]] = relationship("ViolationModel", back_populates="area")
+    violations: Mapped[list["ViolationModel"]] = relationship("ViolationModel", back_populates="area", lazy="selectin")
 
     responsible_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("usermodel.id", name="fk_area_responsible_user_id"),
         info={"verbose_name": "Ответственный из зарегистрированных"})
-    responsible_user: Mapped["UserModel"] = relationship("UserModel", back_populates="responsible_area")
+    responsible_user: Mapped["UserModel"] = relationship("UserModel", back_populates="responsible_area", lazy="selectin")
     # Поле для ручного ввода ФИО ответственного
     responsible_text: Mapped[str | None] = mapped_column(
         String(250),

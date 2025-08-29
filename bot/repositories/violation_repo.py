@@ -91,6 +91,7 @@ class ViolationRepository:
             log.success("Violation {violation} added successfully", violation=violation.description)
             return violation
 
+
     async def update_violation(self, violation_id: int, update_data: dict[str, Any]) -> bool:
         """Обновление места нарушения по id."""
         stmt = (

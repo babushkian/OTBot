@@ -11,10 +11,10 @@ class ImageRepository:
     async def get(self, hash: str) -> FileModel | None:
         """Получение изображения по хэш-сумме"""
         stmt = select(FileModel).where(FileModel.hash==hash)
-        await self.session.execute(stmt).calar_one_or_none()
-        return
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def add(self, file: FileModel) -> None:
         """Добавление изображения в базу"""
         self.session.add(file)
-        await self.session.commit()
+

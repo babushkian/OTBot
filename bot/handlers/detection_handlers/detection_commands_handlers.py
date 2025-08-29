@@ -51,6 +51,7 @@ router = Router(name=__name__)
 media_groups = defaultdict(list)
 # счётчик для учёта количества фото
 media_group_timers = {}
+# подпись к медиагруппе
 group_caption = {}
 
 
@@ -60,6 +61,7 @@ async def handle_media_group(message: types.Message,
                              group_user: UserModel,
                              session: AsyncSession) -> None:
     """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
+    log.info("добавление изображения в медиагруппу")
     media_group_id = message.media_group_id
     if not message.photo:
         return
@@ -93,6 +95,7 @@ async def process_media_group_after_delay(message: types.Message,
                                           session: AsyncSession,
                                           media_group_id: str) -> None:
     """Завершает обработку MediaGroup после задержки."""
+    log.info("окончательная обработка медиагруппы")
     await asyncio.sleep(MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)  # пауза для ожидания загрузки всех фото
     if media_group_id not in media_groups or not media_groups[media_group_id]:
         return
@@ -108,7 +111,10 @@ async def process_media_group_after_delay(message: types.Message,
 
 
 
-@router.message(F.state == DetectionStates.send_photo | F.state == DetectionStates.send_media_group)
+# @router.message(F.state == DetectionStates.send_photo | F.state == DetectionStates.send_media_group)
+# @router.message(F.state == DetectionStates.send_media_group)
+@router.message(DetectionStates.send_media_group)
+# @router.message(DetectionStates.send_photo)
 async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
@@ -116,22 +122,26 @@ async def handle_get_violation_photo(message: types.Message,
                                      media_group_id=None,
                                      ) -> None:
     """Обрабатывает получение фото нарушения."""
-
-    # if not message.photo:
-    #     await message.answer("Необходимо прикрепить фото нарушения.", reply_markup=generate_cancel_button())
-    #     return
+    log.info("обработка одиночного изображения")
+    print("прикрепленная фотография", message.photo)
+    if not message.photo:
+        log.info("фотографии отсутствуют, выход")
+        await message.answer("Необходимо прикрепить фото нарушения.", reply_markup=generate_cancel_button())
+        return
 
     group_description = group_caption.get(media_group_id)
     description = message.caption or group_description or "Без описания"
     group_caption.pop(media_group_id, None)
     current_state = await state.get_state()
-    print(current_state)
-    if False:
+    print("Состояние", current_state)
+    if current_state == "DetectionStates:send_media_group":
         # несколько объединённых фото
-        data = state.get_data()
+        data = await state.get_data()
         images= data["images"]
+        log.info("несколько фото")
     else:
         # одно фото
+        log.info("одно фото")
         file_id = message.photo[-1].file_id
         file = await message.bot.get_file(file_id)
         picture = await message.bot.download_file(file.file_path)
