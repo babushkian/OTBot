@@ -17,3 +17,4 @@ report.pdf
 /bot/migration/versions/*.py
 /typst/typst.exe
 *.sqbpro
+bot/keyboards/category_buttons.json
