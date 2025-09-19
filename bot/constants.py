@@ -39,12 +39,17 @@ def action_needed_deadline() -> tuple[dict[str, str], ...]:
     """Возвращает кортеж действий для исправления с функциями, определяющими срок исполнения."""
     return (
         {"action": "Провести внеплановый инструктаж", "fix_time": get_fix_date(days=1, tz=tz)},
+        {"action": "Предоставить объяснительную", "fix_time": get_fix_date(days=1, tz=tz)},
         {"action": "Оградить опасную зону", "fix_time": "Немедленно"},
+        {"action": "Остановить работы", "fix_time": "Немедленно"},
         {"action": "Отстранить от работы", "fix_time": "Немедленно"},
         {"action": "Превести в соответствие", "fix_time": get_fix_date(days=3, tz=tz)},
         {"action": "Организовать безопасное складирование деталей", "fix_time": get_fix_date(days=3, tz=tz)},
         {"action": "Усилить контроль за выполнением работ", "fix_time": "Немедленно"},
         {"action": "Устранить", "fix_time": get_fix_date(days=3, tz=tz)},
+        {"action": "Отправить на внеплановую проверку знаний", "fix_time": get_fix_date(days=1, tz=tz)},
+        {"action": "Вывести из эксплуатации", "fix_time": "Немедленно"},
+        {"action": "Передать в ремонт", "fix_time": "Немедленно"},
     )
 
 # максимальное количество фото
