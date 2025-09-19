@@ -1,7 +1,7 @@
 """Модели OTBot."""
 
 from sqlalchemy import TEXT, BIGINT, String, ForeignKey, LargeBinary, true, false, TIMESTAMP, func
-from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
+from sqlalchemy.orm import Mapped, relationship, mapped_column
 from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime
 
@@ -37,7 +37,7 @@ class ViolationModel(Base):
     """Модель обнаруженных нарушений."""
 
     detector_id: Mapped[int] = mapped_column(ForeignKey("usermodel.id", name="fk_detector_user_id"))
-    detector: Mapped["UserModel"] = relationship("UserModel", back_populates="violations", lazy="selectin")
+    detector: Mapped[UserModel] = relationship("UserModel", back_populates="violations", lazy="selectin")
 
     area_id: Mapped[int] = mapped_column(ForeignKey("areamodel.id", name="fk_violation_area_id"))
     area: Mapped["AreaModel"] = relationship("AreaModel", back_populates="violations", lazy="selectin")
@@ -66,7 +66,7 @@ class FileModel(SimpleBase):
     path: Mapped[str] = mapped_column(String(255), nullable=False)
     orientation: Mapped[ImgOrientation]
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    violations: Mapped[list["ViolationModel"]] = relationship(secondary="violation_files", back_populates="files",
+    violations: Mapped[list[ViolationModel]] = relationship(secondary="violation_files", back_populates="files",
                                                               lazy="selectin")
 
 
