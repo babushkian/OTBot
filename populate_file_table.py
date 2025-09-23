@@ -8,7 +8,7 @@ import os
 import shutil
 from pathlib import Path
 
-from bot.utils.image_utils import get_image_orientation
+from bot.utils.image_utils import get_image_aspect_ratio
 
 DATABASE_URL = "sqlite:///otbot.db"
 engine = create_engine(DATABASE_URL, echo=False)
@@ -22,9 +22,10 @@ session.commit()
 
 BASEDIR = Path("images")
 for i in BASEDIR.rglob("*.jpg"):
-    with Image.open(i) as img:
-        orientation = get_image_orientation(img)
-    session.add(FileModel(hash=i.stem, path=str(i), orientation=orientation ))
+    # with Image.open(i) as img:
+    with open(i, "rb") as img:
+        aspect_ratio = get_image_aspect_ratio(img.read())
+    session.add(FileModel(hash=i.stem, path=str(i), aspect_ratio=aspect_ratio ))
 session.commit()
 
 viols = session.execute(select(ViolationModel)).scalars().all()

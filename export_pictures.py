@@ -37,8 +37,6 @@ def create_img_dir():
 
             # записываем хэш в БД
             i.picture_hash = picture_hash
-
-
     session.commit()
 
 

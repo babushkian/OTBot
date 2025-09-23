@@ -6,8 +6,6 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from PIL import Image
-
-from bot.enums import ImgOrientation
 from bot.config import IMAGE_DIR
 
 
@@ -17,7 +15,7 @@ class ImageInfo:
 
     hash: str
     path: str
-    orientation: ImgOrientation
+    aspect_ratio: float
 
 
 def get_hash(image: bytes) -> str:
@@ -37,19 +35,19 @@ def save_image(image: bytes, img_hash: str) -> Path:
     return filepath
 
 
-def get_image_orientation(image_body: bytes) -> ImgOrientation:
+def get_image_aspect_ratio(image_body: bytes) -> float:
     """Определяет ориентацию изображения для последуюшей компоновки в отчете."""
     image = Image.open(BytesIO(image_body))
     width, height = image.size
-    return ImgOrientation.VERT if height > width else ImgOrientation.HORIZ
+    return width / height
 
 
 def handle_image(image: bytes) ->ImageInfo:
     """Сохраняет двоичные данные в файл и возвращает сведения об этом файле."""
     img_hash = get_hash(image)
-    orientation = get_image_orientation(image)
+    aspect_ratio = get_image_aspect_ratio(image)
     path = save_image(image, img_hash)
-    return ImageInfo(hash=img_hash, path=str(path), orientation=orientation)
+    return ImageInfo(hash=img_hash, path=str(path), aspect_ratio=aspect_ratio)
 
 
 def get_file(path: Path) -> bytes:
