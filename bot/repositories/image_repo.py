@@ -17,6 +17,5 @@ class ImageRepository:
     async def add(self, file: FileModel) -> None:
         """Добавление изображения в базу"""
         self.session.add(file)
-        await self.session.flush()
         return file
 

@@ -42,6 +42,8 @@ from bot.handlers.detection_handlers.detection_keyboards import (
     create_violation_keyboard_by_cell_id,
 )
 
+from bot.db.database import async_session_factory
+
 router = Router(name=__name__)
 
 # TODO разнести логику ввода и одобрения/отклонения нарушения по разным файлам
@@ -59,7 +61,7 @@ group_caption = {}
 async def handle_media_group(message: types.Message,
                              state: FSMContext,
                              group_user: UserModel,
-                             session: AsyncSession) -> None:
+                             ) -> None:
     """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
     log.info("добавление изображения в медиагруппу")
     media_group_id = message.media_group_id
@@ -85,14 +87,13 @@ async def handle_media_group(message: types.Message,
 
     # Запускаем новый таймер
     media_group_timers[media_group_id] = asyncio.create_task(
-        process_media_group_after_delay(message, state, group_user, session, media_group_id),
+        process_media_group_after_delay(message, state, group_user, media_group_id),
     )
 
 
 async def process_media_group_after_delay(message: types.Message,
                                           state: FSMContext,
                                           group_user: UserModel,
-                                          session: AsyncSession,
                                           media_group_id: str) -> None:
     """Завершает обработку MediaGroup после задержки."""
     log.info("окончательная обработка медиагруппы")
@@ -105,16 +106,14 @@ async def process_media_group_after_delay(message: types.Message,
     # merged_photos = await merge_images(photos, gap=10)  # объединённое фото
     await state.update_data(images=photos)
     await state.set_state(DetectionStates.send_media_group)
-    await handle_get_violation_photo(message, state, group_user, session, media_group_id)
+    async with async_session_factory() as session:
+        await handle_get_violation_photo(message, state, group_user, session, media_group_id)
 
     media_group_timers.pop(media_group_id)
 
 
-
-# @router.message(F.state == DetectionStates.send_photo | F.state == DetectionStates.send_media_group)
-# @router.message(F.state == DetectionStates.send_media_group)
-@router.message(DetectionStates.send_media_group)
-# @router.message(DetectionStates.send_photo)
+@router.message(DetectionStates.send_photo)
+# для обработки медиагруппы не нужен фильтр состояния, так как она вызывается напрямую из process_media_group_after_delay
 async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
