@@ -2,12 +2,60 @@ import json
 
 from pathlib import Path
 from datetime import datetime, timezone
-
+from bot.db.models import FileModel
 
 from bot.enums import ViolationStatus
 from bot.config import BASEDIR
-from bot.constants import REPORT_JSON_FILE, tz
+from bot.constants import REPORT_JSON_FILE, tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
+
+def _image_string(image: FileModel) -> str:
+    image_path_relative = "..\\" + image.path
+    return f'image("{image_path_relative}")\n'
+
+
+def _image_grid(images: list[FileModel]) -> str:
+    output = []
+    data_list = []
+    template = "#grid(columns: ({0}fr, {1}fr), gutter: 2pt,{2})\n"
+    for image in images:
+        image_path_relative = "..\\" + image.path
+        output.append(f'image("{image_path_relative}")')
+        data_list.append(int(image.aspect_ratio * 100))
+    data_list.append(",\n".join(output))
+    return template.format(*data_list)
+
+
+def _image_row_expression(images: list[FileModel]) -> str:
+    if len(images)== 1:
+        return f"#{_image_string(images[0])}"
+    elif len(images)> 1:
+        return _image_grid(images)
+    raise Exception("Пустой список изображений")
+
+
+def _get_images_layout(images: list[FileModel]) -> str:
+    imgs_string = ""
+    imgs = images.copy()
+    imgs.sort(key= lambda x: x.aspect_ratio)
+    while imgs:
+        pair_aspect_ratio = []
+        cur_img = imgs.pop()
+        row = [cur_img]
+        for pair in imgs:
+            pair_aspect_ratio.append(FIT_IMAGES_ASPECT_RATIO - cur_img.aspect_ratio - pair.aspect_ratio)
+        print(pair_aspect_ratio)
+        only_pozitive_delta = list(filter(lambda x: x>=0, pair_aspect_ratio))
+        if only_pozitive_delta and imgs:
+            pair_index = pair_aspect_ratio.index(min(only_pozitive_delta))
+            row.append(imgs.pop(pair_index))
+        imgs_string += _image_row_expression(row)
+    result = "#block(breakable: true, spacing: 2pt)[{}]".format(imgs_string)
+    print(result)
+    return result
+
+
+
 
 
 def generate_typst_new(violations: tuple, created_by: UserModel) -> str:
@@ -85,11 +133,12 @@ def generate_typst_new(violations: tuple, created_by: UserModel) -> str:
 
     # Обработка каждого нарушения
     for i, violation in enumerate(violations, start=1):
-        # временная копия изображения
-        images_string = ""
-        for file in violation.files:
-            image_path_relative = "..\\" + file.path
-            images_string += f'image("{image_path_relative}", width: {report_settings["col_width"]["C"]}),\n'
+        images_cell = _get_images_layout(violation.files)
+        # images_string = ""
+        # for file in violation.files:
+        #
+        #     image_path_relative = "..\\" + file.path
+        #     images_string += f'image("{image_path_relative}", width: {report_settings["col_width"]["C"]}),\n'
 
         # описание нарушения
         description = f"""
@@ -106,7 +155,7 @@ def generate_typst_new(violations: tuple, created_by: UserModel) -> str:
         typst_code += f"""
             [{violation.id}],
             [{localized_datetime}],
-            [#stack({images_string})],
+            [{images_cell}],
             [#align(left)[{description}]],
             [#align(left)[{violation.actions_needed}]],
             [#text(size: 10pt, weight: "bold")[{violation.status}]],

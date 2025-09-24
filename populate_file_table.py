@@ -22,7 +22,6 @@ session.commit()
 
 BASEDIR = Path("images")
 for i in BASEDIR.rglob("*.jpg"):
-    # with Image.open(i) as img:
     with open(i, "rb") as img:
         aspect_ratio = get_image_aspect_ratio(img.read())
     session.add(FileModel(hash=i.stem, path=str(i), aspect_ratio=aspect_ratio ))
