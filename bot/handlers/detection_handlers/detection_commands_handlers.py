@@ -25,7 +25,7 @@ from bot.repositories.user_repo import UserRepository
 from bot.keyboards.common_keyboards import generate_cancel_button, generate_yes_no_keyboard
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
-from bot.handlers.reports_handlers.create_reports import create_typst_report, create_typst_report_new
+from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
 from bot.handlers.detection_handlers.detection_utils import merge_images
 from bot.utils.image_utils import get_file
@@ -102,13 +102,12 @@ async def process_media_group_after_delay(message: types.Message,
         return
 
     photos = media_groups.pop(media_group_id)
-
+    # старая версия, когда все переданные фотографии сливались в одну
     # merged_photos = await merge_images(photos, gap=10)  # объединённое фото
     await state.update_data(images=photos)
     await state.set_state(DetectionStates.send_media_group)
     async with async_session_factory() as session:
         await handle_get_violation_photo(message, state, group_user, session, media_group_id)
-
     media_group_timers.pop(media_group_id)
 
 
@@ -122,7 +121,6 @@ async def handle_get_violation_photo(message: types.Message,
                                      ) -> None:
     """Обрабатывает получение фото нарушения."""
     log.info("обработка одиночного изображения")
-    print("прикрепленная фотография", message.photo)
     if not message.photo:
         log.info("фотографии отсутствуют, выход")
         await message.answer("Необходимо прикрепить фото нарушения.", reply_markup=generate_cancel_button())
@@ -132,7 +130,6 @@ async def handle_get_violation_photo(message: types.Message,
     description = message.caption or group_description or "Без описания"
     group_caption.pop(media_group_id, None)
     current_state = await state.get_state()
-    print("Состояние", current_state)
     if current_state == "DetectionStates:send_media_group":
         # несколько объединённых фото
         data = await state.get_data()
@@ -316,17 +313,14 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             await message.answer(f"Данные нарушения №{success.id} сохранены.")
             log.success("Violation data {violation} added", violation=data["description"])
             # оповещаем админов
-            user_repo = UserRepository(session)
-            admins = await user_repo.get_users_by_role(UserRole.ADMIN)
-            admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
-            for admin_id in admins_telegrams:
+            for admin_id in settings.SUPER_USERS_TG_ID:
                 await message.bot.send_message(admin_id,
                                                text=f"Новое нарушение:\n"
                                                     f"Описание: '{data['description']}'.\n"
                                                     f"Зафиксировано {group_user.first_name}.\n"
                                                     f"Номер нарушения {success.id}.\n"
                                                     f"Для проверки используйте команду /check.")
-            log.debug("Notification sent to {admins}", admins=admins_telegrams)
+            log.debug("Notification sent to {admins}", admins=settings.SUPER_USERS_TG_ID)
             await message.answer("Нарушение отправлено администраторам на одобрение.")
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
@@ -338,8 +332,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
         await message.answer("Заполнение отменено, для повторного вызовите команду /detect.")
         await state.clear()
         log.info("Violation data {user} update canceled", user=group_user.first_name)
-
-
 
 
 @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
@@ -362,7 +354,7 @@ async def handle_violation_review(
                             area=violation.area.name)
 
     # отправка акта нарушения для review
-    pdf_file = create_typst_report_new(violations=(violation,), created_by=group_user)
+    pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
     caption = f"Место: {violation.area.name}\nОписание: {violation.description}"
     document = FSInputFile(pdf_file)
     user_tg = callback.from_user.id
@@ -416,7 +408,7 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
             caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
             caption_pdf = f"Детали нарушения №{data['id']}"
 
-            pdf_file = create_typst_report_new(violations=(violation_data,), created_by=group_user)
+            pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
             document = FSInputFile(pdf_file)
 
             try:

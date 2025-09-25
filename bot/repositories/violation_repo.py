@@ -21,7 +21,6 @@ class ViolationRepository:
 
     async def get_violation_by_id(self, violation_id: int) -> ViolationModel | None:
         """Получение нарушения по id."""
-        print("Получение нарушения по id.")
         try:
             result = await self.session.execute(select(ViolationModel)
                                                 .where(ViolationModel.id == violation_id)
@@ -45,8 +44,6 @@ class ViolationRepository:
 
             if not violation:
                 return None
-            for i in violation.files:
-                print(i.hash, i.path)
             return violation
 
 

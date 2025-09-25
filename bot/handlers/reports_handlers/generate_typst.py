@@ -44,21 +44,19 @@ def _get_images_layout(images: list[FileModel]) -> str:
         row = [cur_img]
         for pair in imgs:
             pair_aspect_ratio.append(FIT_IMAGES_ASPECT_RATIO - cur_img.aspect_ratio - pair.aspect_ratio)
-        print(pair_aspect_ratio)
         only_pozitive_delta = list(filter(lambda x: x>=0, pair_aspect_ratio))
         if only_pozitive_delta and imgs:
             pair_index = pair_aspect_ratio.index(min(only_pozitive_delta))
             row.append(imgs.pop(pair_index))
         imgs_string += _image_row_expression(row)
-    result = "#block(breakable: true, spacing: 2pt)[{}]".format(imgs_string)
-    print(result)
+    #result = "#block(breakable: true, spacing: 0.5pt, fill: lime, stroke: purple)[{}]".format(imgs_string)
+    result = "#grid(columns: (1fr,))[{}]".format(imgs_string)
     return result
 
 
 
 
-
-def generate_typst_new(violations: tuple, created_by: UserModel) -> str:
+def generate_typst(violations: tuple, created_by: UserModel) -> str:
     """Генерация typst-кода.."""
     output_dir = BASEDIR / Path("typst") / Path("violation_images")
 
@@ -134,11 +132,6 @@ def generate_typst_new(violations: tuple, created_by: UserModel) -> str:
     # Обработка каждого нарушения
     for i, violation in enumerate(violations, start=1):
         images_cell = _get_images_layout(violation.files)
-        # images_string = ""
-        # for file in violation.files:
-        #
-        #     image_path_relative = "..\\" + file.path
-        #     images_string += f'image("{image_path_relative}", width: {report_settings["col_width"]["C"]}),\n'
 
         # описание нарушения
         description = f"""

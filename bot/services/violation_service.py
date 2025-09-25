@@ -33,7 +33,6 @@ class ViolationService:
                 img_file = existing_file
             else:
                 img_file = FileModel(**asdict(image_info))
-            print(img_file)
             violation.files.append(img_file)
         self.session.add(violation)
 

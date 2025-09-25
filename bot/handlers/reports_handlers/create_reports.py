@@ -12,69 +12,21 @@ from bot.enums import ViolationStatus
 from bot.config import BASEDIR
 from bot.db.models import UserModel
 from logger_config import log
-from bot.handlers.reports_handlers.reports_utils import (
-    generate_typst,
-    remove_default_sheet,
-)
-from bot.handlers.reports_handlers.report_utils_new import generate_typst_new
+from bot.handlers.reports_handlers.reports_utils import remove_default_sheet
+from bot.handlers.reports_handlers.generate_typst import generate_typst
+
 
 
 def create_typst_report(created_by: UserModel,
-                        violations: tuple) -> str:
-    return "fake"
-
-
-# def create_typst_report(created_by: UserModel,
-#                         violations: tuple) -> Path:
-#     """Создание отчёта pdf с помощью typst."""
-#     typst_document = generate_typst(violations, created_by=created_by)
-#
-#     report_typ_file = BASEDIR / Path("typst") / Path("report.typ")
-#     print(f"{report_typ_file=}")
-#     with report_typ_file.open("w", encoding="utf-8") as typ_file:
-#         typ_file.write(typst_document)
-#
-#     output_pdf = BASEDIR / Path("violations") / report_typ_file.with_suffix(".pdf").name
-#     print(f"{output_pdf=}")
-#     if platform.system() == "Windows":
-#         typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
-#                          r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
-#                          r"\typst-x86_64-pc-windows-msvc\typst.exe")
-#         # упрощенный путь к экзешнику, создающему отчеты
-#         typst_command = Path(BASEDIR / "typst" / "typst.exe")
-#         cmd = [typst_command, "compile", report_typ_file, output_pdf]
-#
-#     else:
-#         cmd = ["typst", "compile", report_typ_file, output_pdf]
-#
-#     result = subprocess.run(
-#         cmd,
-#         capture_output=True,
-#         text=True,
-#         check=True,
-#     )
-#
-#     if result.returncode != 0:
-#         log.error(f"Ошибка компиляции:\n{result.stderr}")
-#         msg = "Не удалось скомпилировать Typst файл"
-#         raise RuntimeError(msg)
-#
-#     log.success(f"PDF успешно создан: {output_pdf}")
-#     return output_pdf
-
-
-def create_typst_report_new(created_by: UserModel,
                         violations: tuple) -> Path:
     """Создание отчёта pdf с помощью typst."""
-    typst_document = generate_typst_new(violations, created_by=created_by)
+    typst_document = generate_typst(violations, created_by=created_by)
 
     report_typ_file = BASEDIR / Path("typst") / Path("report.typ")
-    print(f"{report_typ_file=}")
     with report_typ_file.open("w", encoding="utf-8") as typ_file:
         typ_file.write(typst_document)
 
     output_pdf = BASEDIR / Path("violations") / report_typ_file.with_suffix(".pdf").name
-    print(f"{output_pdf=}")
     if platform.system() == "Windows":
         typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
                          r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
