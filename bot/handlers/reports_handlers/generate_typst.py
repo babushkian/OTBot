@@ -9,8 +9,13 @@ from bot.config import BASEDIR
 from bot.constants import REPORT_JSON_FILE, tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
 
+def _get_image_path(image: FileModel) -> Path:
+    x = Path("..") / image.path
+    print(x.absolute())
+    return Path("..") /  image.path
+
 def _image_string(image: FileModel) -> str:
-    image_path_relative = "..\\" + image.path
+    image_path_relative = _get_image_path(image)
     return f'image("{image_path_relative}")\n'
 
 
@@ -19,7 +24,8 @@ def _image_grid(images: list[FileModel]) -> str:
     data_list = []
     template = "#grid(columns: ({0}fr, {1}fr), gutter: 2pt,{2})\n"
     for image in images:
-        image_path_relative = "..\\" + image.path
+
+        image_path_relative = _get_image_path(image)
         output.append(f'image("{image_path_relative}")')
         data_list.append(int(image.aspect_ratio * 100))
     data_list.append(",\n".join(output))
