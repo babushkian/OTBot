@@ -25,17 +25,21 @@ class ViolationService:
                            status=data["status"],
                            actions_needed=",\n".join(actions[index - 1] for index in data["actions_needed"]),
                         )
-
-        for image in data["images"]:
-            image_info = handle_image(image)
-            existing_file = await self.images.get(image_info.hash)
-            if existing_file:
-                img_file = existing_file
-            else:
-                img_file = FileModel(**asdict(image_info))
-            violation.files.append(img_file)
         self.session.add(violation)
-
+        # если ставить self.session.add(violation) перед добавлением в него файлов, надо использовать no_autoflush
+        # если сначала к сессии добавлять файлы, а потом нарушения, все будет нормально
+        # no_autoflush чтобы file не делал ленивую загрузку violations, иначе будет ошибка асинхронного запроса
+        # ошибка будет в том, что сессия пытается получить filemodel.violations, которых еще нет
+        with self.session.no_autoflush:
+            for image in data["images"]:
+                image_info = handle_image(image)
+                existing_file = await self.images.get(image_info.hash)
+                if existing_file:
+                    img_file = existing_file
+                else:
+                    img_file = FileModel(**asdict(image_info))
+                    await self.images.add(img_file)
+                violation.files.append(img_file)
         await self.session.commit()
         return violation
 

@@ -10,8 +10,6 @@ from bot.constants import REPORT_JSON_FILE, tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
 
 def _get_image_path(image: FileModel) -> Path:
-    x = Path("..") / image.path
-    print(x.absolute())
     return Path("..") /  image.path
 
 def _image_string(image: FileModel) -> str:
@@ -58,8 +56,6 @@ def _get_images_layout(images: list[FileModel]) -> str:
     #result = "#block(breakable: true, spacing: 0.5pt, fill: lime, stroke: purple)[{}]".format(imgs_string)
     result = "#grid(columns: (1fr,))[{}]".format(imgs_string)
     return result
-
-
 
 
 def generate_typst(violations: tuple, created_by: UserModel) -> str:
