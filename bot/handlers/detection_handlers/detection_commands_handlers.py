@@ -1,10 +1,6 @@
 """Обработчики обнаружения нарушений."""
 import asyncio
-import sys
-from asyncio import timeout
-
-from io import BytesIO
-from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from aiogram import F, Router, types
@@ -29,7 +25,6 @@ from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.detection_handlers.states import DetectionStates, ViolationStates
 from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
-from bot.handlers.detection_handlers.detection_utils import merge_images
 from bot.utils.image_utils import get_file
 from bot.keyboards.inline_keyboards.callback_factories import (
     AreaSelectFactory,
@@ -51,13 +46,14 @@ router = Router(name=__name__)
 # TODO разнести логику ввода и одобрения/отклонения нарушения по разным файлам
 
 
-# словарь медиа группы
-media_groups: dict[str, list[bytes]] = defaultdict(list)
-# счётчик для учёта количества фото
-media_group_timers: dict[str, asyncio.Task] = {}
-media_group_events: dict[str, asyncio.Event] = {}
-# подпись к медиагруппе
-group_caption: dict[str, str | None ] = {}
+@dataclass
+class MediaGroupContext:
+    photos: list[bytes] = field(default_factory=list)   # список фото
+    caption: str | None = None                      # подпись
+    event: asyncio.Event = field(default_factory=asyncio.Event)  # для сброса таймера
+    task: asyncio.Task | None = None                # ссылка на запущенную задачу
+
+media_groups: dict[str, MediaGroupContext] = {}
 
 
 @router.message(DetectionStates.send_photo, F.media_group_id)
@@ -67,33 +63,32 @@ async def handle_media_group(message: types.Message,
                              ) -> None:
     """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
     log.info("добавление изображения в медиагруппу")
-    media_group_id = message.media_group_id
     if not message.photo:
         return
 
-    # каждое изображение
+    media_group_id = message.media_group_id
+    ctx = media_groups.setdefault(media_group_id, MediaGroupContext())
+    if message.caption:
+        ctx.caption = message.caption
+
+    # добавляем изображение
     file_id = message.photo[-1].file_id
     file = await message.bot.get_file(file_id)
     picture = await message.bot.download_file(file.file_path)
-    if message.caption:
-        group_caption[media_group_id] = message.caption
-    # список всех фото
-    media_groups[media_group_id].append(picture.read())
+    ctx.photos.append(picture.read())
 
-
-    if len(media_groups[media_group_id]) > MAX_SEND_PHOTO:
+    if len(ctx.photos) > MAX_SEND_PHOTO:
         await message.answer(f"⚠️ Можно отправить не более {MAX_SEND_PHOTO} фото.")
+        ctx.task.cancel()
         return
 
-    if media_group_id not in media_group_timers:
-        print("начинаем отслеживание картинок")
-        media_group_events[media_group_id] = asyncio.Event()
-        media_group_timers[media_group_id] = asyncio.create_task(
+    if ctx.task is None:
+        ctx.event = asyncio.Event()
+        ctx.task = asyncio.create_task(
             process_media_group_after_delay(message, state, group_user, media_group_id),
         )
     else:
-        print("следующий цикл ожидания картинки")
-        media_group_events[media_group_id].set()
+        ctx.event.set()
 
 
 
@@ -103,33 +98,27 @@ async def process_media_group_after_delay(message: types.Message,
                                           media_group_id: str) -> None:
     """Завершает обработку MediaGroup после задержки."""
     log.info("окончательная обработка медиагруппы")
-    try:
-        log.debug("обработка группы картинок")
-        # если приходит новая картинка из медиагруппы, перезапускаем таймер
-        # если событие не установлено (event.set()), то происходит ошибка таймаута, выходим из цикла
-        while True:
-            event = media_group_events[media_group_id]
-            log.debug(event)
-            try:
-                log.debug("ждем, чем завершится ожидание" )
-                await asyncio.wait_for(event.wait(), timeout=MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)
-                event.clear()
-                log.debug("сбрасываем таймер")
-                continue
-            except asyncio.TimeoutError:
-                log.debug("прерываем цикл, складываем картинки в состояние")
-                break
+    # возможно, нужно обернуть всю функцию в try fimally
+    ctx = media_groups[media_group_id]
+    # если приходит новая картинка из медиагруппы, перезапускаем таймер
+    # если событие не установлено (event.set()), то происходит ошибка таймаута, выходим из цикла
+    while True:
+        try:
+            await asyncio.wait_for(ctx.event.wait(), timeout=MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)
+            ctx.event.clear()
+            continue
+        except asyncio.TimeoutError:
+            break
 
+    photos = ctx.photos
+    await state.update_data(images=photos, caption=ctx.caption)
 
-        photos = media_groups.pop(media_group_id)
-        await state.update_data(images=photos)
-        await state.set_state(DetectionStates.send_media_group)
-        async with async_session_factory() as session:
-            await handle_get_violation_photo(message, state, group_user, session, media_group_id)
-    finally:
-        print("удаляем словарь, который отслеживает картинки")
-        media_group_timers.pop(media_group_id)
-        media_group_events.pop(media_group_id)
+    await state.set_state(DetectionStates.send_media_group)
+    async with async_session_factory() as session:
+        await handle_get_violation_photo(message, state, group_user, session)
+
+    del media_groups[media_group_id]
+
 
 
 @router.message(DetectionStates.send_photo)
@@ -138,7 +127,6 @@ async def handle_get_violation_photo(message: types.Message,
                                      state: FSMContext,
                                      group_user: UserModel,
                                      session: AsyncSession,
-                                     media_group_id=None,
                                      ) -> None:
     """Обрабатывает получение фото нарушения."""
     log.info("обработка одиночного изображения")
@@ -147,13 +135,11 @@ async def handle_get_violation_photo(message: types.Message,
         await message.answer("Необходимо прикрепить фото нарушения.", reply_markup=generate_cancel_button())
         return
 
-    group_description = group_caption.get(media_group_id)
-    description = message.caption or group_description or "Без описания"
-    group_caption.pop(media_group_id, None)
     current_state = await state.get_state()
     if current_state == "DetectionStates:send_media_group":
         # несколько объединённых фото
         data = await state.get_data()
+        description = message.caption or data["caption"] or "Без описания"
         images= data["images"]
         log.info("несколько фото")
     else:
