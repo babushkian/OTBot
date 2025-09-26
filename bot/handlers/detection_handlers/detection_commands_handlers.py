@@ -1,5 +1,7 @@
 """Обработчики обнаружения нарушений."""
 import asyncio
+import sys
+from asyncio import timeout
 
 from io import BytesIO
 from collections import defaultdict
@@ -50,11 +52,12 @@ router = Router(name=__name__)
 
 
 # словарь медиа группы
-media_groups = defaultdict(list)
+media_groups: dict[str, list[bytes]] = defaultdict(list)
 # счётчик для учёта количества фото
-media_group_timers = {}
+media_group_timers: dict[str, asyncio.Task] = {}
+media_group_events: dict[str, asyncio.Event] = {}
 # подпись к медиагруппе
-group_caption = {}
+group_caption: dict[str, str | None ] = {}
 
 
 @router.message(DetectionStates.send_photo, F.media_group_id)
@@ -77,18 +80,21 @@ async def handle_media_group(message: types.Message,
     # список всех фото
     media_groups[media_group_id].append(picture.read())
 
-    # отменяем таймера если есть итерация
-    if media_group_id in media_group_timers:
-        media_group_timers[media_group_id].cancel()
 
     if len(media_groups[media_group_id]) > MAX_SEND_PHOTO:
         await message.answer(f"⚠️ Можно отправить не более {MAX_SEND_PHOTO} фото.")
         return
 
-    # Запускаем новый таймер
-    media_group_timers[media_group_id] = asyncio.create_task(
-        process_media_group_after_delay(message, state, group_user, media_group_id),
-    )
+    if media_group_id not in media_group_timers:
+        print("начинаем отслеживание картинок")
+        media_group_events[media_group_id] = asyncio.Event()
+        media_group_timers[media_group_id] = asyncio.create_task(
+            process_media_group_after_delay(message, state, group_user, media_group_id),
+        )
+    else:
+        print("следующий цикл ожидания картинки")
+        media_group_events[media_group_id].set()
+
 
 
 async def process_media_group_after_delay(message: types.Message,
@@ -97,18 +103,33 @@ async def process_media_group_after_delay(message: types.Message,
                                           media_group_id: str) -> None:
     """Завершает обработку MediaGroup после задержки."""
     log.info("окончательная обработка медиагруппы")
-    await asyncio.sleep(MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)  # пауза для ожидания загрузки всех фото
-    if media_group_id not in media_groups or not media_groups[media_group_id]:
-        return
+    try:
+        log.debug("обработка группы картинок")
+        # если приходит новая картинка из медиагруппы, перезапускаем таймер
+        # если событие не установлено (event.set()), то происходит ошибка таймаута, выходим из цикла
+        while True:
+            event = media_group_events[media_group_id]
+            log.debug(event)
+            try:
+                log.debug("ждем, чем завершится ожидание" )
+                await asyncio.wait_for(event.wait(), timeout=MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)
+                event.clear()
+                log.debug("сбрасываем таймер")
+                continue
+            except asyncio.TimeoutError:
+                log.debug("прерываем цикл, складываем картинки в состояние")
+                break
 
-    photos = media_groups.pop(media_group_id)
-    # старая версия, когда все переданные фотографии сливались в одну
-    # merged_photos = await merge_images(photos, gap=10)  # объединённое фото
-    await state.update_data(images=photos)
-    await state.set_state(DetectionStates.send_media_group)
-    async with async_session_factory() as session:
-        await handle_get_violation_photo(message, state, group_user, session, media_group_id)
-    media_group_timers.pop(media_group_id)
+
+        photos = media_groups.pop(media_group_id)
+        await state.update_data(images=photos)
+        await state.set_state(DetectionStates.send_media_group)
+        async with async_session_factory() as session:
+            await handle_get_violation_photo(message, state, group_user, session, media_group_id)
+    finally:
+        print("удаляем словарь, который отслеживает картинки")
+        media_group_timers.pop(media_group_id)
+        media_group_events.pop(media_group_id)
 
 
 @router.message(DetectionStates.send_photo)
