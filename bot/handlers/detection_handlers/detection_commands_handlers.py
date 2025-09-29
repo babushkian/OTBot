@@ -2,7 +2,7 @@
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-
+from collections import defaultdict
 from aiogram import F, Router, types
 from aiogram.types import FSInputFile, BufferedInputFile, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
@@ -52,8 +52,11 @@ class MediaGroupContext:
     caption: str | None = None                      # подпись
     event: asyncio.Event = field(default_factory=asyncio.Event)  # для сброса таймера
     task: asyncio.Task | None = None                # ссылка на запущенную задачу
+    cancelled: bool = False                               # медиагруппа отменена из-за превышения количества фотографий
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-media_groups: dict[str, MediaGroupContext] = {}
+# media_groups: dict[str, MediaGroupContext] = {}
+media_groups: dict[str, MediaGroupContext] = defaultdict(MediaGroupContext)
 
 
 @router.message(DetectionStates.send_photo, F.media_group_id)
@@ -65,30 +68,39 @@ async def handle_media_group(message: types.Message,
     log.info("добавление изображения в медиагруппу")
     if not message.photo:
         return
-
     media_group_id = message.media_group_id
-    ctx = media_groups.setdefault(media_group_id, MediaGroupContext())
-    if message.caption:
-        ctx.caption = message.caption
+    #ctx = media_groups.setdefault(media_group_id, MediaGroupContext())
+    ctx = media_groups[media_group_id]
 
-    # добавляем изображение
-    file_id = message.photo[-1].file_id
-    file = await message.bot.get_file(file_id)
-    picture = await message.bot.download_file(file.file_path)
-    ctx.photos.append(picture.read())
+    async with ctx.lock:
+        print("-----------------------------")
+        print(f" {ctx.caption=}, imgs={len(ctx.photos)} {ctx.cancelled=}")
+        print("-----------------------------")
+        if ctx.cancelled:
+            return
 
-    if len(ctx.photos) > MAX_SEND_PHOTO:
-        await message.answer(f"⚠️ Можно отправить не более {MAX_SEND_PHOTO} фото.")
-        ctx.task.cancel()
-        return
+        if message.caption:
+            ctx.caption = message.caption
+        # добавляем изображение
+        file_id = message.photo[-1].file_id
+        file = await message.bot.get_file(file_id)
+        picture = await message.bot.download_file(file.file_path)
+        ctx.photos.append(picture.read())
+        if len(ctx.photos) > MAX_SEND_PHOTO:
+            await message.answer(f"⚠️ Можно отправить не более {MAX_SEND_PHOTO} фото.")
+            ctx.cancelled = True
+            print(f"отменяем задачу {ctx.cancelled=}")
+            if ctx.task and not ctx.task.done():
+                ctx.task.cancel()
+            return
 
-    if ctx.task is None:
-        ctx.event = asyncio.Event()
-        ctx.task = asyncio.create_task(
-            process_media_group_after_delay(message, state, group_user, media_group_id),
-        )
-    else:
-        ctx.event.set()
+        if ctx.task is None:
+            ctx.event = asyncio.Event()
+            ctx.task = asyncio.create_task(
+                process_media_group_after_delay(message, state, group_user, media_group_id),
+            )
+        else:
+            ctx.event.set()
 
 
 
@@ -102,22 +114,27 @@ async def process_media_group_after_delay(message: types.Message,
     ctx = media_groups[media_group_id]
     # если приходит новая картинка из медиагруппы, перезапускаем таймер
     # если событие не установлено (event.set()), то происходит ошибка таймаута, выходим из цикла
-    while True:
-        try:
-            await asyncio.wait_for(ctx.event.wait(), timeout=MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)
-            ctx.event.clear()
-            continue
-        except asyncio.TimeoutError:
-            break
+    try:
+        while True:
+            try:
+                await asyncio.wait_for(ctx.event.wait(), timeout=MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS)
+                ctx.event.clear()
+                continue
+            except asyncio.TimeoutError:
+                break
 
-    photos = ctx.photos
-    await state.update_data(images=photos, caption=ctx.caption)
+        photos = ctx.photos
+        await state.update_data(images=photos, caption=ctx.caption)
 
-    await state.set_state(DetectionStates.send_media_group)
-    async with async_session_factory() as session:
-        await handle_get_violation_photo(message, state, group_user, session)
+        await state.set_state(DetectionStates.send_media_group)
+        async with async_session_factory() as session:
+            await handle_get_violation_photo(message, state, group_user, session)
 
-    del media_groups[media_group_id]
+    except asyncio.CancelledError:
+        log.debug("Превышен лимит фотографий")
+        raise Exception("Превышен лимит фотографий")
+    finally:
+        media_groups.pop(media_group_id)
 
 
 
