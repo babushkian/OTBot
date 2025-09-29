@@ -1,7 +1,9 @@
 /.venv
 /misc
-.env
+.env*
 .idea
+/.vscode
+/.venv
 /venv
 __pycache__
 tst_in_otbot.py
