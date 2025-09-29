@@ -21,7 +21,7 @@ class ViolationService:
                            description=data["description"],
                            detector_id=data["detector_id"],
                            category=data["category"],
-                           picture=data["images"][0],
+                           # picture=data["images"][0],
                            status=data["status"],
                            actions_needed=",\n".join(actions[index - 1] for index in data["actions_needed"]),
                         )

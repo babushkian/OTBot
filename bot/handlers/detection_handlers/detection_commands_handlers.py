@@ -136,10 +136,10 @@ async def handle_get_violation_photo(message: types.Message,
         return
 
     current_state = await state.get_state()
+    data = await state.get_data()
+    description = message.caption or data.get("caption", None) or "Без описания"
     if current_state == "DetectionStates:send_media_group":
         # несколько объединённых фото
-        data = await state.get_data()
-        description = message.caption or data["caption"] or "Без описания"
         images= data["images"]
         log.info("несколько фото")
     else:
