@@ -8,8 +8,13 @@ RUN apt-get update && \
     apt-get install -y \
         wget \
         ca-certificates \
-        xz-utils && \
-    rm -rf /var/lib/apt/lists/*
+        xz-utils \
+        fonts-liberation \
+        fonts-noto-core \
+        fonts-dejavu \
+        fonts-dejavu-core \
+        fonts-dejavu-extra \
+    && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем uv
 RUN pip install uv
