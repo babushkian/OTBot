@@ -5,7 +5,8 @@ ENV TZ=Asia/Omsk
 
 # Устанавливаем необходимые системные зависимости
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
+        fontconfig \
         wget \
         ca-certificates \
         xz-utils \

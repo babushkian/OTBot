@@ -82,8 +82,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             font: (
                 "Liberation Sans",  // Основной шрифт для Linux
                 "Noto Sans",        // Fallback 1
-                "DejaVu Sans",      // Fallback 2
-                "Arial",            // Fallback 3 (если вдруг есть)
+                "DejaVu Sans",      // Fallback 2                
             ),
             size: 10pt
             )        
