@@ -3,7 +3,7 @@ from aiogram import F, Router, types
 from openpyxl.reader.excel import load_workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.constants import VIOLATION_CATEGORY_JSON_FILE
+from bot.config import settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.repositories.user_repo import UserRepository
@@ -52,7 +52,7 @@ async def handle_get_xlsx(message: types.Message) -> None:
                 file_data = await bot.download_file(file.file_path)
                 excel_workbook = load_workbook(filename=file_data)
                 create_inline_buttons_from_excel(excel_workbook=excel_workbook,
-                                                 json_file=VIOLATION_CATEGORY_JSON_FILE)
+                                                 json_file=settings.violation_category_json_file)
             except Exception as e:
                 await message.reply(f"Произошла ошибка: {e!r}")
                 log.error("Error updating violation categories buttons.")

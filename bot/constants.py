@@ -3,7 +3,6 @@
 from pathlib import Path
 from datetime import timezone, timedelta
 
-from bot.config import BASEDIR
 from bot.common_utils import get_fix_date
 
 # команды меню пользователей
@@ -57,10 +56,7 @@ MAX_SEND_PHOTO = 4
 # какое должно быть оптимальное суммарное соотношение сторон у двух изображений в одной строке таблицы
 FIT_IMAGES_ASPECT_RATIO = 1.9
 # время ожидания в секундах загрузки каждого фото когда пользователь отправляет несколько фото
-MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 0.3
+MAX_SECONDS_TO_WAIT_WHILE_UPLOADING_PHOTOS = 1.0
 
-
-VIOLATION_CATEGORY_JSON_FILE = BASEDIR / Path("bot") / Path("keyboards") / Path("category_buttons.json")
-REPORT_JSON_FILE = BASEDIR / Path("bot") / Path("handlers") / Path("reports_handlers") / Path("report_settings.json")
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from bot.config import BASEDIR
+from bot.config import settings
 
 console_format = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
@@ -14,7 +14,7 @@ console_format = (
     "<level>{exception}</level>"
 )
 
-LOG_DIR = BASEDIR / "logs"
+LOG_DIR = settings.BASE_DIR / "logs"
 if not Path.exists(LOG_DIR):
     Path.mkdir(LOG_DIR, parents=True)
 

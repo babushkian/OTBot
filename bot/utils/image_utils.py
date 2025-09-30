@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from PIL import Image
-from bot.config import IMAGE_DIR
+from bot.config import settings
 
 
 @dataclass()
@@ -25,7 +25,7 @@ def get_hash(image: bytes) -> str:
 
 def save_image(image: bytes, img_hash: str) -> Path:
     """Сохраняет двоичные данные в файл изображения и возвращает путь к этому файлу."""
-    subdir = IMAGE_DIR / img_hash[:2]
+    subdir = settings.image_dir / img_hash[:2]
     if not subdir.exists():
         subdir.mkdir()
     filepath = subdir / f"{img_hash}.jpg"

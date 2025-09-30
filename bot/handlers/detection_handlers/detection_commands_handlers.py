@@ -399,7 +399,6 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
 
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
         violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
-        # violation_data = await violation_repo.get_violation_by_id_new(violation_id=data["id"])
         if success:
             # обратная связь зафиксировавшему нарушение
             await message.bot.send_message(chat_id=data["detector_tg"],

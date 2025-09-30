@@ -4,9 +4,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 from bot.db.models import FileModel
 
-from bot.enums import ViolationStatus
-from bot.config import BASEDIR
-from bot.constants import REPORT_JSON_FILE, tz, FIT_IMAGES_ASPECT_RATIO
+from bot.config import settings
+from bot.constants import tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
 
 def _get_image_path(image: FileModel) -> Path:
@@ -60,8 +59,6 @@ def _get_images_layout(images: list[FileModel]) -> str:
 
 def generate_typst(violations: tuple, created_by: UserModel) -> str:
     """Генерация typst-кода.."""
-    output_dir = BASEDIR / Path("typst") / Path("violation_images")
-
     responsible_mans = []
     for i in violations:
         if i.area.responsible_user:
@@ -70,7 +67,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             responsible_mans.append(i.area.responsible_text)
 
     responsible_str = ", ".join(set(responsible_mans))
-    with REPORT_JSON_FILE.open(encoding="utf-8") as file:
+    with settings.report_config_file.open(encoding="utf-8") as file:
         report_settings = json.load(file)
 
     typst_code = f"""

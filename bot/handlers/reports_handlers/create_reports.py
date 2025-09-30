@@ -9,37 +9,37 @@ from collections import defaultdict
 from openpyxl import Workbook
 
 from bot.enums import ViolationStatus
-from bot.config import BASEDIR
 from bot.db.models import UserModel
 from logger_config import log
 from bot.handlers.reports_handlers.reports_utils import remove_default_sheet
 from bot.handlers.reports_handlers.generate_typst import generate_typst
+from bot.config import settings
 
+
+def get_typst_file(created_by: UserModel,
+                        violations: tuple,
+                        typ_file: Path) -> None:
+    typst_document = generate_typst(violations, created_by=created_by)
+
+    with typ_file.open("w", encoding="utf-8") as tf:
+        tf.write(typst_document)
 
 
 def create_typst_report(created_by: UserModel,
                         violations: tuple) -> Path:
     """Создание отчёта pdf с помощью typst."""
-    typst_document = generate_typst(violations, created_by=created_by)
-
-    report_typ_file = BASEDIR / Path("typst") / Path("report.typ")
-    with report_typ_file.open("w", encoding="utf-8") as typ_file:
-        typ_file.write(typst_document)
-
-    output_pdf = BASEDIR / Path("violations") / report_typ_file.with_suffix(".pdf").name
+    typ_file = settings.report_typ_file
+    get_typst_file(created_by, violations, typ_file)
+    pdf_file = settings.report_pdf_file
     if platform.system() == "Windows":
-        typst_command = (r"C:\Users\user-18\AppData\Local\Microsoft\WinGet\Packages"
-                         r"\Typst.Typst_Microsoft.Winget.Source_8wekyb3d8bbwe"
-                         r"\typst-x86_64-pc-windows-msvc\typst.exe")
-        # упрощенный путь к экзешнику, создающему отчеты
-        typst_command = Path(BASEDIR / "typst" / "typst.exe")
-        # cmd = [typst_command, "compile", report_typ_file, output_pdf]
-        cmd = [typst_command, "compile", "--root", BASEDIR, report_typ_file, output_pdf]
+        typst_command = settings.typst_dir / "typst.exe"
+        cmd = [typst_command, "compile", "--root", settings.BASE_DIR, typ_file, pdf_file]
 
     else:
-        cmd = ["typst", "compile",  "--root", BASEDIR, report_typ_file, output_pdf]
+        cmd = ["typst", "compile",  "--root", settings.BASE_DIR, typ_file, pdf_file]
 
     try:
+        print("параметры запуска typst:", cmd)
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -56,8 +56,8 @@ def create_typst_report(created_by: UserModel,
 
 
 
-    log.success(f"PDF успешно создан: {output_pdf}")
-    return output_pdf
+    log.success(f"PDF успешно создан: {pdf_file}")
+    return pdf_file
 
 
 

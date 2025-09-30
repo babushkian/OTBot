@@ -4,7 +4,7 @@ from aiogram import Router, types
 from aiogram.types import FSInputFile
 from aiogram.filters import Command, CommandStart
 
-from bot.config import BASEDIR, settings
+from bot.config import settings
 from bot.db.models import UserModel
 from logger_config import log
 from bot.set_bot_commands import set_bot_commands
@@ -42,7 +42,7 @@ async def command_instruction(message: types.Message,
         log.warning("Пользователь без доступа с tg_id {user_id} запросил инструкцию.",
                     user_id=message.from_user.id)
         return
-    instruction_file = BASEDIR / "bot" / "docs" / "docs OTBot.pdf"
+    instruction_file = settings.BASE_BOT_DIR / "docs" / "docs OTBot.pdf"
     caption = "Инструкция OTBot"
     await message.bot.send_document(chat_id=message.from_user.id,
                                     document=FSInputFile(instruction_file),
