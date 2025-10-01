@@ -317,14 +317,17 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             await message.answer(f"Данные нарушения №{success.id} сохранены.")
             log.success("Violation data {violation} added", violation=data["description"])
             # оповещаем админов
-            for admin_id in settings.SUPER_USERS_TG_ID:
+            user_repo = UserRepository(session)
+            admins = await user_repo.get_users_by_role(UserRole.ADMIN)
+            admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
+            for admin_id in admins_telegrams:
                 await message.bot.send_message(admin_id,
                                                text=f"Новое нарушение:\n"
                                                     f"Описание: '{data['description']}'.\n"
                                                     f"Зафиксировано {group_user.first_name}.\n"
                                                     f"Номер нарушения {success.id}.\n"
                                                     f"Для проверки используйте команду /check.")
-            log.debug("Notification sent to {admins}", admins=settings.SUPER_USERS_TG_ID)
+            log.debug("Notification sent to {admins}", admins=admins_telegrams)
             await message.answer("Нарушение отправлено администраторам на одобрение.")
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
