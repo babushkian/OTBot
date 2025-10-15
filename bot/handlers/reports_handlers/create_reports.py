@@ -39,7 +39,6 @@ def create_typst_report(created_by: UserModel,
         cmd = ["typst", "compile",  "--root", settings.BASE_DIR, typ_file, pdf_file]
 
     try:
-        print("параметры запуска typst:", cmd)
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -53,8 +52,6 @@ def create_typst_report(created_by: UserModel,
         log.error(e.stderr)
         msg = "Не удалось скомпилировать Typst файл"
         raise RuntimeError(msg)
-
-
 
     log.success(f"PDF успешно создан: {pdf_file}")
     return pdf_file
