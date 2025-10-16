@@ -75,10 +75,10 @@
     дата:#h(0.3cm) {{today}} #h(0.3cm)
     подпись:
     #box(width: 3cm)[#hide[w]#place(top + left, dx: -3mm, dy: -10mm)[#image("{{sign_path}}", width: 3cm)]]
-{% if created_by %}
-  {{created_by.user_role}} \ {{created_by.first_name}}
+{% if created_by -%}
+{{created_by.user_role}}  {{created_by.first_name}}
 {% else %}
-Ведущий инженер по ОТ и ПБ \ Жгулев Н.С./Муталинов Т.Е.
+Ведущий инженер по ОТ и ПБ   Жгулев Н.С./Муталинов Т.Е.
 {% endif %}
 
   ]
