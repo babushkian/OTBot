@@ -20,7 +20,6 @@ class ViolationData:
     status: str
 
 
-
 def _get_sign_path(user: UserModel) -> Path | None:
     """Если изображение подписи для данного пользователя доступно, возвращает путь, доступный для использования
     в typst-отчете."""
@@ -126,6 +125,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
         "created_by": created_by,
         "today": datetime.now(tz=tz).strftime('%d.%m.%Y'),
         "violations": violation_table,
+        "sign_path": _get_sign_path(created_by)
     }
     typst_code = template.render(**context)
     return typst_code
