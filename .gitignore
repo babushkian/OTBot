@@ -19,3 +19,4 @@ report.pdf
 /typst/typst.exe
 *.sqbpro
 bot/keyboards/category_buttons.json
+/images
