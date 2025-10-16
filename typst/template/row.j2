@@ -1,0 +1,8 @@
+{% macro row(data) %}
+  [{{data.number}}],
+  [{{data.date}}],
+  [{{data.photos}}],
+  [#align(left)[{{data.description}}]],
+  [#align(left)[{{data.terms}}]],
+  [#text(size: 10pt, weight: "bold")[{{data.status}}]],
+{% endmacro %}

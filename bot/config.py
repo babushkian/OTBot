@@ -44,6 +44,11 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def report_template(self) -> Path:
+        return self.typst_dir / "template"
+
+    @computed_field
+    @property
     def image_dir(self) -> Path:
         """Нужно записывать в базу относительный путь, чтобы typst нормально его обрабатывал"""
         return Path("images")

@@ -1,12 +1,25 @@
+from dataclasses import dataclass
 import json
 
 from pathlib import Path
 from datetime import datetime, timezone
-from bot.db.models import FileModel
+from jinja2 import Environment, FileSystemLoader
 
+from bot.db.models import FileModel
 from bot.config import settings
 from bot.constants import tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
+
+@dataclass
+class ViolationData:
+    number: str
+    date: str
+    photos: str
+    description: str
+    terms: str
+    status: str
+
+
 
 def _get_sign_path(user: UserModel) -> Path | None:
     """Если изображение подписи для данного пользователя доступно, возвращает путь, доступный для использования
@@ -82,71 +95,13 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
     with settings.report_config_file.open(encoding="utf-8") as file:
         report_settings = json.load(file)
 
-    sign_path = _get_sign_path(created_by)
-    sign_string = f'#place(top+left, dx:-2mm, dy:-10mm)[#image("{sign_path}", width:3cm)]' if sign_path else ""
 
-    typst_code = f"""
-        // базовые настройки
-        #set page(
-                width: {report_settings["page_size"]["width"]},
-                height: {report_settings["page_size"]["height"]},
-                margin: {report_settings["page_size"]["margin"]}
-                )
-        //#set text(font: "Arial", size: 10pt)        
-        #set text(
-            font: (
-                "Liberation Sans",  // Основной шрифт для Linux
-                "Noto Sans",        // Fallback 1
-                "DejaVu Sans",      // Fallback 2                
-            ),
-            size: 10pt
-            )        
-        #set heading(numbering: "1.")
 
-        // стили
-        #let centered-title(body) = align(center)[
-            #text(size: 16pt, weight: "bold")[#body]]
 
-        // шапка
-        #align(right)[Ответственным: \\ {responsible_str}.]
-        //#align(right)[Копия: главному инженеру \\ {report_settings["engineer"]}.]
-        #align(right)[от {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"} \\
-        {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}]
-
-        // заголовок
-        #centered-title[Предписание]
-        Дата формирования предписания: {datetime.now(tz=tz).strftime('%d.%m.%Y')}
-        #centered-title[Устранить следующие нарушения:]
-
-        // таблица
-        #set table(
-            align: center,
-            inset: 5pt,
-            stroke: 0.5pt
-            )
-        #table(
-            columns: (
-                {report_settings["col_width"]["A"]},
-                {report_settings["col_width"]["B"]}, 
-                {report_settings["col_width"]["C"]},
-                {report_settings["col_width"]["D"]},
-                {report_settings["col_width"]["E"]},
-                {report_settings["col_width"]["F"]},
-                    ),
-            // шапка таблицы
-            [*{report_settings["headers"]["A"]}*],
-            [*{report_settings["headers"]["B"]}*],
-            [*{report_settings["headers"]["C"]}*],
-            [*{report_settings["headers"]["D"]}*],
-            [*{report_settings["headers"]["E"]}*],
-            [*{report_settings["headers"]["F"]}*],
-        """
-
-    # Обработка каждого нарушения
-    for i, violation in enumerate(violations, start=1):
-        images_cell = _get_images_layout(violation.files)
-
-        # описание нарушения
+    env = Environment(loader=FileSystemLoader(settings.report_template))
+    template = env.get_template("main.j2")
+    violation_table = []
+    for violation in violations:
         description = f"""
             Описание: {violation.description} \\ \\
             Категория: {violation.category} \\ \\
@@ -154,43 +109,23 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             Ответственный: {violation.area.responsible_text} \\ \\
             Нарушение зафиксировал: {violation.detector.first_name}"""
 
-        # заполнение таблицы
-        # Форматируем дату с учетом временной зоны
-        localized_datetime = (violation.created_at.replace(tzinfo=timezone.utc)
-                              .astimezone(tz=tz).strftime("%d.%m.%Y %H:%M"))
-        typst_code += f"""
-            [{violation.id}],
-            [{localized_datetime}],
-            [{images_cell}],
-            [#align(left)[{description}]],
-            [#align(left)[{violation.actions_needed}]],
-            [#text(size: 10pt, weight: "bold")[{violation.status}]],
-        """
+        violation_table.append(ViolationData(
+                number=violation.id,
+                date=violation.created_at.replace(tzinfo=timezone.utc).astimezone(tz=tz).strftime("%d.%m.%Y %H:%M"),
+                photos=_get_images_layout(violation.files),
+                description=description,
+                terms=violation.actions_needed,
+                status=violation.status,
+        ))
 
-    # footer
-    typst_code += f""")
-        \\
-        #text(size: 12pt, weight: "bold")[О выполнении настоящего предписания прошу сообщить по
-        каждому пункту \\ согласно сроку устранения письменно.]
-        \\
-        \\        
-        #block()[
-            #set par(leading: 1em)
-            #align(left)[
-                Предписание выдал: \\
-                дата:#h(0.3cm) {datetime.now(tz=tz).strftime('%d.%m.%Y')} #h(0.3cm)
-                подпись:
-                #box(width:3cm)[#hide[w]{sign_string}]
-                {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}
-                {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"}    
-            ]
-        ]	    
-        \\
-        #align(left)[
-        Контроль устранения нарушений провел: \\ \\
-        дата:#h(3cm)
-        подпись:#h(2cm) 
-        // {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}
-        // {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"}
-        ]"""
+
+    # TODO: вместо словаря лучше передавать объект со всеми параметрами.
+    context = {
+        "report_settings": report_settings,
+        "responsible_str": responsible_str,
+        "created_by": created_by,
+        "today": datetime.now(tz=tz).strftime('%d.%m.%Y'),
+        "violations": violation_table,
+    }
+    typst_code = template.render(**context)
     return typst_code
