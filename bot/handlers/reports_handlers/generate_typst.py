@@ -9,31 +9,29 @@ from bot.constants import tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
 
 def _get_sign_path(user: UserModel) -> Path | None:
+    """Если изображение подписи для данного пользователя доступно, возвращает путь, доступный для использования
+    в typst-отчете."""
     sign_path = Path("images") / "signs" / f"{user.id}.png"
-    print(sign_path)
-    print(sign_path.resolve())
     if sign_path.exists():
         return  Path("..") / sign_path
     return None
 
 def _get_image_path(image: FileModel) -> Path:
+    """Возвращает путь фоторгафии из базы, доступняй для использования в typst-шаблоне."""
     return Path("..") /  image.path
 
 def _image_string(image: FileModel) -> str:
+    """Возвращает фгамент форматирования typst, представляющий собой картинку."""
     image_path_relative = _get_image_path(image)
-    # return f'image("{image_path_relative}")\n'
     return f'box(inset:0pt, stroke:white)[#image("{image_path_relative}")]'
 
 
 def _image_grid(images: list[FileModel]) -> str:
+    """"Функция создает фрагмент форматирования, где две фотографии расположены в ряд."""
     output = []
     data_list = []
     template = "grid(columns: ({0}fr, {1}fr), gutter: 2pt,{2})\n"
     for image in images:
-
-        image_path_relative = _get_image_path(image)
-        # output.append(f'image("{image_path_relative}")')
-        # output.append(f'box(inset:0pt, stroke:white)[#image("{image_path_relative}")]')
         output.append(_image_string(image))
         data_list.append(int(image.aspect_ratio * 100))
     data_list.append(",\n".join(output))
@@ -41,14 +39,19 @@ def _image_grid(images: list[FileModel]) -> str:
 
 
 def _image_row_expression(images: list[FileModel]) -> str:
+    """Выбирает какой фрагмент форматирования вернуть: одну или две фотографии в ряд."""
     if len(images)== 1:
-        return f"{_image_string(images[0])}"
+        return _image_string(images[0])
     elif len(images)> 1:
         return _image_grid(images)
     raise Exception("Пустой список изображений")
 
 
 def _get_images_layout(images: list[FileModel]) -> str:
+    """Компонует фотографии в таблице.
+
+    Если фотографии вертикальные, компонует их по две в ряд. Если горизонтальные, то по одной.
+    Возвращает фрагмент форматирования для ячейки таблицы, где размещены все фотографии."""
     imgs_string = ""
     imgs = images.copy()
     imgs.sort(key= lambda x: x.aspect_ratio)
@@ -75,14 +78,13 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             responsible_mans.append(i.area.responsible_user.first_name)
         else:
             responsible_mans.append(i.area.responsible_text)
-
     responsible_str = ", ".join(set(responsible_mans))
     with settings.report_config_file.open(encoding="utf-8") as file:
         report_settings = json.load(file)
 
     sign_path = _get_sign_path(created_by)
-    sign_string = f'#place(top+left, dx:-3mm, dy:-10mm)[#image("{sign_path}", width:3cm)]' if sign_path else ""
-    print("подпись", created_by.id, sign_string)
+    sign_string = f'#place(top+left, dx:-2mm, dy:-10mm)[#image("{sign_path}", width:3cm)]' if sign_path else ""
+
     typst_code = f"""
         // базовые настройки
         #set page(
@@ -172,7 +174,6 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
         каждому пункту \\ согласно сроку устранения письменно.]
         \\
         \\        
-        // переделанный участок
         #block()[
             #set par(leading: 1em)
             #align(left)[
@@ -183,14 +184,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
                 {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}
                 {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"}    
             ]
-        ]	
-
-        
-        
-        
-        
-        
-        
+        ]	    
         \\
         #align(left)[
         Контроль устранения нарушений провел: \\ \\
@@ -199,5 +193,4 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
         // {created_by.first_name if created_by else "Жгулев Н.С./Муталинов Т.Е."}
         // {created_by.user_role if created_by else "Ведущий инженер по ОТ и ПБ"}
         ]"""
-
     return typst_code
