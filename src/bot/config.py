@@ -35,7 +35,6 @@ class Settings(BaseSettings):
     """Настройки, переменные окружения приложения."""
     BASE_DIR: ClassVar = PROJECT_ROOT
     DATA_DIR: ClassVar = PROJECT_ROOT / "data"
-    BASE_BOT_DIR: ClassVar = PROJECT_ROOT / "src" / "bot"
     DB_NAME: str
     BOT_TOKEN: str
     SUPER_USERS_TG_ID: Tuple[int, ...]
@@ -45,13 +44,17 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def violation_category_json_file(self) -> Path:
-        return self.BASE_BOT_DIR / "keyboards" / "category_buttons.json"
+        return self.DATA_DIR / "json" /  "category_buttons.json"
 
     @computed_field
     @property
     def report_config_file(self) -> Path:
-        return self.BASE_BOT_DIR / "handlers" / "reports_handlers" / "report_settings.json"
+        return  self.DATA_DIR / "json" / "report_settings.json"
 
+    @computed_field
+    @property
+    def docs_dir(self) -> Path:
+        return  self.DATA_DIR / "docs"
 
     @computed_field
     @property

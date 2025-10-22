@@ -23,9 +23,11 @@ class ViolationData:
 def _get_sign_path(user: UserModel) -> Path | None:
     """Если изображение подписи для данного пользователя доступно, возвращает путь, доступный для использования
     в typst-отчете."""
-    sign_path = Path("images") / "signs" / f"{user.id}.png"
+    sign_subpath = Path("signs") / f"{user.id}.png"
+    rel_sign_path = settings.image_dir / sign_subpath
+    sign_path = settings.image_write_dir / sign_subpath
     if sign_path.exists():
-        return  Path("..") / sign_path
+        return  Path("..") / rel_sign_path
     return None
 
 def _get_image_path(image: FileModel) -> Path:
@@ -33,7 +35,7 @@ def _get_image_path(image: FileModel) -> Path:
     return Path("..") /  image.path
 
 def _image_string(image: FileModel) -> str:
-    """Возвращает фгамент форматирования typst, представляющий собой картинку."""
+    """Возвращает фрагмент форматирования typst, представляющий собой картинку."""
     image_path_relative = _get_image_path(image)
     return f'box(inset:0pt, stroke:white)[#image("{image_path_relative}")]'
 

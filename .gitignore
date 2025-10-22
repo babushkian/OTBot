@@ -13,10 +13,11 @@ statistics.txt
 static
 report.pdf
 *.jpg
-/typst/violation_images/*.jpg
-/typst/report.typ
-/typst/typst.exe
+*/typst/violation_images
+*/typst/report.typ
+*/typst/typst.exe
 *.sqbpro
 bot/keyboards/category_buttons.json
-/data
-/src/bot/docs
+/data/images
+/data/logs
+
