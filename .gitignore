@@ -10,7 +10,6 @@ tst_in_otbot.py
 /temp
 statistics.txt
 *.db
-logs
 static
 report.pdf
 *.jpg
@@ -19,4 +18,5 @@ report.pdf
 /typst/typst.exe
 *.sqbpro
 bot/keyboards/category_buttons.json
-/images
+/data
+/src/bot/docs

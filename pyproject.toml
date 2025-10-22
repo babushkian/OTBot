@@ -12,6 +12,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "pillow>=11.2.1",
     "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
     "reportlab>=4.4.0",
     "sqlalchemy>=2.0.40",
 ]
@@ -30,3 +31,50 @@ dev = [
 pythonpath = ["."]
 addopts = "-ra -q"
 testpaths = ["tests"]
+
+[tool.ruff]
+# Максимальная длина строки (можно сделать как в Black)
+line-length = 120
+src = ["."]
+
+[tool.ruff.lint]
+# Укажите директории с исходным кодом
+
+
+exclude = [   ".venv",
+   "venv",
+   ".idea",
+   ".vscode",
+]
+
+
+# Включаем популярные линтинговые правила
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "D",  # pydocstyle (докстринги)
+    "DJ", # ruff-django
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "T20",
+    "ANN", # аннотации типов
+]
+
+# Совместимость с Black
+extend-select = ["I001"]
+
+ignore = [
+    "ANN002",  # необязательные аргументы *args
+    "ANN003",  # необязательные аргументы **kwargs
+    "ANN201",  # отсутствие аннотации возвращаемого значения
+    "ANN401",  # тип Any
+    "D203", # обязательная пустая строка меред докстрингом при объявлении класса
+    #"D211", # отсутствие пустых строк пеерд классом
+    "D213", # кавычки докстринга на отдельной строке
+]
+
+# можно включать игнорирование для отдельтных каталогов или файлов
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
