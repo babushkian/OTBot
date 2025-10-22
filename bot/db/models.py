@@ -41,8 +41,6 @@ class ViolationModel(Base):
 
     area_id: Mapped[int] = mapped_column(ForeignKey("areamodel.id", name="fk_violation_area_id"))
     area: Mapped["AreaModel"] = relationship("AreaModel", back_populates="violations", lazy="selectin")
-    picture: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
-    picture_hash: Mapped[str] = mapped_column(String(64), nullable=True)
     description: Mapped[str] = mapped_column(String(200))
     status: Mapped[ViolationStatus] = mapped_column(default=ViolationStatus.ACTIVE)
     category: Mapped[str]
