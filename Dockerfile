@@ -33,23 +33,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --no-dev > requirements.txt && \
     uv pip install --system -r requirements.txt
 
-COPY . .
+COPY alembic.ini ./
+COPY src ./
 
 CMD ["python", "main.py"]
 
-
-# create image:
-    # docker build -t otbot .
-
-# run container:
-    # для обычного запуска
-        # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" --name otbot-ins otbot
-    # для просмотра папок отчётов:
-        # docker run -d -v "$(pwd)/otbot.db:/app/otbot.db" -v "$(pwd)/logs:/app/logs" -v "$(pwd)/typst:/app/typst" -v "$(pwd)/violations:/app/violations" --name otbot-ins otbot
-
-# other commands:
-    # docker ps -a  # Увидеть все контейнеры
-    # docker logs otbot  # Посмотреть логи вашего бота
-    # docker stop otbot # Остановить контейнер
-    # docker rm otbot # Удалить контейнер
 
