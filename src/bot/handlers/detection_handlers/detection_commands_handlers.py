@@ -408,7 +408,8 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
                                            text=f"Нарушение №{data["id"]} одобрено администратором.")
 
             # отправка в группу
-            image_path = Path(violation_data.files[0].path)
+            image_path = settings.DATA_DIR / Path(violation_data.files[0].path)
+
             jpeg_file = get_file(image_path)
 
             caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
