@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.13.9-slim
 
 ENV PYTHONUNBUFFERED=1
 ENV TZ=Asia/Omsk
@@ -34,8 +34,8 @@ RUN uv export --no-dev > requirements.txt && \
     uv pip install --system -r requirements.txt
 
 COPY alembic.ini ./
-COPY src ./
+COPY src ./src
 
-CMD ["python", "main.py"]
+CMD ["python3", "./src/main.py"]
 
 
