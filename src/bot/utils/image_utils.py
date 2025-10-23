@@ -60,5 +60,10 @@ def handle_image(image: bytes) ->ImageInfo:
 
 def get_file(path: Path) -> bytes:
     """Возвращает тело файла по его пути."""
-    with path.open("rb") as file:
-        return file.read()
+    try:
+        with path.open("rb") as file:
+            return file.read()
+    except Exception as e:
+        log.error("Не обнаружен файл изображения по адресу %s" % str(path))
+        log.exception(e)
+        raise e
