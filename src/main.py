@@ -15,6 +15,10 @@ from bot.config import settings
 from bot.logger_config import log
 from bot.set_bot_commands import check_main_menu_on_startup
 
+print(settings.BOT_TOKEN)
+print(settings.DB_NAME)
+print(settings.DATA_DIR)
+print(settings.BASE_DIR)
 
 async def on_startup(bot: Bot) -> None:  # функция выполняется при запуске бота
     """Функция на выполнение при запуске бота."""
