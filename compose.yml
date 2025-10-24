@@ -1,0 +1,10 @@
+services:
+  otbot:
+    build: .
+    image: otbot
+    container_name: otbot-ins
+    env_file:
+      - ./.env
+    volumes:
+      - ./data:/app/data
+    command: "uv run ./src/main.py"
