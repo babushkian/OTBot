@@ -6,6 +6,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+import sys
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parents[3]  # до корня проекта
+SRC_DIR = BASE_DIR / "src"
+
+sys.path.insert(0, str(SRC_DIR))
+
 from bot.db.database import Base, database_url
 from bot.db.models import UserModel, AreaModel, ViolationModel
 

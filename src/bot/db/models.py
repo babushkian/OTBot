@@ -47,6 +47,7 @@ class ViolationModel(Base):
     actions_needed: Mapped[str] = mapped_column(TEXT)  # Мероприятия по устранению нарушения
     files: Mapped[list["FileModel"]] = relationship(secondary="violation_files", back_populates="violations",
                                                     lazy="selectin")
+    number: Mapped[int] = mapped_column(info={"verbose_name": "Номер предписания"}) # уникальный в рамках одного года
 
     def __str__(self) -> str:
         """Строковое представление."""
