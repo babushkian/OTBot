@@ -309,8 +309,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
     """Обработчик для ответов "Да" или "Нет" при обнаружении нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
-        actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
-
         violation_service = ViolationService(session)
         success = await violation_service.add(data)
         if success:
@@ -318,16 +316,23 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             log.success("Violation data {violation} added", violation=data["description"])
             # оповещаем админов
             user_repo = UserRepository(session)
-            admins = await user_repo.get_users_by_role(UserRole.ADMIN)
-            admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
-            for admin_id in admins_telegrams:
+            # этот подъож не универсальный, он ссылается на базу,  ан не на .env
+            # из-за чего на dev-сервере сыпятся ошибки
+            # admins = await user_repo.get_users_by_role(UserRole.ADMIN)
+            # admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
+            # for admin_id in admins_telegrams:
+            for admin_id in settings.SUPER_USERS_TG_ID:
+                print("-----------------------")
+                print(admin_id)
+                print("-----------------------")
                 await message.bot.send_message(admin_id,
                                                text=f"Новое нарушение:\n"
                                                     f"Описание: '{data['description']}'.\n"
                                                     f"Зафиксировано {group_user.first_name}.\n"
-                                                    f"Номер нарушения {success.id}.\n"
+                                                    f"Номер нарушения {success.number}.\n"
                                                     f"Для проверки используйте команду /check.")
-            log.debug("Notification sent to {admins}", admins=admins_telegrams)
+            log.debug("Notification sent to {admins}", admins= settings.SUPER_USERS_TG_ID)
+            # log.debug("Notification sent to {admins}", admins=admins_telegrams)
             await message.answer("Нарушение отправлено администраторам на одобрение.")
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")

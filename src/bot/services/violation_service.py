@@ -16,15 +16,17 @@ class ViolationService:
 
 
     async def add(self, data):
+        number = await self.violations.get_max_number()
         actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
-        violation = ViolationModel(area_id=data["area_id"],
-                           description=data["description"],
-                           detector_id=data["detector_id"],
-                           category=data["category"],
-                           # picture=data["images"][0],
-                           status=data["status"],
-                           actions_needed=",\n".join(actions[index - 1] for index in data["actions_needed"]),
-                        )
+        violation = ViolationModel(
+            area_id=data["area_id"],
+            number = number + 1,
+            description=data["description"],
+            detector_id=data["detector_id"],
+            category=data["category"],
+            status=data["status"],
+            actions_needed=",\n".join(actions[index - 1] for index in data["actions_needed"]),
+        )
         self.session.add(violation)
         # если ставить self.session.add(violation) перед добавлением в него файлов, надо использовать no_autoflush
         # если сначала к сессии добавлять файлы, а потом нарушения, все будет нормально

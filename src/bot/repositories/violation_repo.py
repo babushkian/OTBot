@@ -2,7 +2,7 @@
 from typing import Any, Sequence
 from datetime import datetime
 
-from sqlalchemy import delete, select, update, between
+from sqlalchemy import delete, select, update, between, func, extract
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,6 +68,22 @@ class ViolationRepository:
             violations = result.scalars().all()
             log.success("{col} violations found successfully", col=len(violations))
             return violations
+
+    async def get_max_number(self):
+        current_year = datetime.now().year
+        stmt = (select(func.max(ViolationModel.number))
+                    .where(
+                        extract("year", ViolationModel.created_at) ==current_year
+                    )
+                )
+        try:
+            result  = (await self.session.execute(stmt)).scalar()
+            log.success("результат запроса номера {number}", number= result)
+        except Exception as e:
+            log.error("Ошибка при получении номера последнего поручения.")
+            log.exception(e)
+            raise
+        return result or 0
 
 
     async def add_violation(self, violation: ViolationModel) -> ViolationModel | None:
