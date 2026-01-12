@@ -32,9 +32,12 @@ async def handle_violation_close(callback: types.CallbackQuery,
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
 
-    await state.update_data(detector_tg=violation.detector.telegram_id,
-                            description=violation.description,
-                            area=violation.area.name)
+    await state.update_data(
+        number=violation.number,
+        detector_tg=violation.detector.telegram_id,
+        description=violation.description,
+        area=violation.area.name
+    )
 
     # отправка акта нарушения для проверки перед закрытием
     pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
@@ -51,7 +54,6 @@ async def handle_violation_close(callback: types.CallbackQuery,
 
     await callback.message.answer("Выберите действие:", reply_markup=action_kb)
     await state.set_state(ViolationCloseStates.review)
-    await callback.answer("Выбрано действие.")
     log.debug("Пользователь {user} запустил процесс закрытия нарушения.", user=group_user.first_name)
 
 

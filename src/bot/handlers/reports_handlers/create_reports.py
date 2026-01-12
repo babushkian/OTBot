@@ -16,9 +16,9 @@ from bot.handlers.reports_handlers.generate_typst import generate_typst
 from bot.config import settings
 
 
-def get_typst_file(created_by: UserModel,
-                        violations: tuple,
-                        typ_file: Path) -> None:
+def write_typst_file(created_by: UserModel,
+                     violations: tuple,
+                     typ_file: Path) -> None:
     typst_document = generate_typst(violations, created_by=created_by)
 
     with typ_file.open("w", encoding="utf-8") as tf:
@@ -29,7 +29,7 @@ def create_typst_report(created_by: UserModel,
                         violations: tuple) -> Path:
     """Создание отчёта pdf с помощью typst."""
     typ_file = settings.report_typ_file
-    get_typst_file(created_by, violations, typ_file)
+    write_typst_file(created_by, violations, typ_file)
     pdf_file = settings.report_pdf_file
     if platform.system() == "Windows":
         typst_command = settings.typst_dir / "typst.exe"

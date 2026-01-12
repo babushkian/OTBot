@@ -97,8 +97,6 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
         report_settings = json.load(file)
 
 
-
-
     env = Environment(loader=FileSystemLoader(settings.report_template))
     template = env.get_template("main.j2")
     violation_table = []
@@ -111,7 +109,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             Нарушение зафиксировал: {violation.detector.first_name}"""
 
         violation_table.append(ViolationData(
-                number=violation.id,
+                number=violation.number,
                 date=violation.created_at.replace(tzinfo=timezone.utc).astimezone(tz=tz).strftime("%d.%m.%Y %H:%M"),
                 photos=_get_images_layout(violation.files),
                 description=description,

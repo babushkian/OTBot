@@ -322,9 +322,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             # admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
             # for admin_id in admins_telegrams:
             for admin_id in settings.SUPER_USERS_TG_ID:
-                print("-----------------------")
-                print(admin_id)
-                print("-----------------------")
                 await message.bot.send_message(admin_id,
                                                text=f"Новое нарушение:\n"
                                                     f"Описание: '{data['description']}'.\n"

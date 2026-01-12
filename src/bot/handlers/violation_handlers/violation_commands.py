@@ -34,6 +34,7 @@ async def violation_close(message: types.Message, access_denied: bool,
                                "btn_name": f"Нарушение №{violation.id}-{violation.area.name}"}
                               for violation in violations])
 
+
     violations_kb = await create_keyboard(items=violations_to_kb, text_key="btn_name",
                                           callback_factory=ViolationsFactory)
     await message.answer("Выберите нарушение для закрытия:", reply_markup=violations_kb)
