@@ -316,7 +316,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             log.success("Violation data {violation} added", violation=data["description"])
             # оповещаем админов
             user_repo = UserRepository(session)
-            # этот подъож не универсальный, он ссылается на базу,  ан не на .env
+            # этот подход не универсальный, он ссылается на базу,  ан не на .env
             # из-за чего на dev-сервере сыпятся ошибки
             # admins = await user_repo.get_users_by_role(UserRole.ADMIN)
             # admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]

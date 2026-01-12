@@ -26,6 +26,7 @@ async def handle_violation_close(callback: types.CallbackQuery,
                                  session: AsyncSession,
                                  group_user: UserModel) -> None:
     """Обработчик для просмотра нарушения."""
+    await callback.answer()
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
     violation = await violation_repo.get_violation_by_id(callback_data.id)
@@ -64,7 +65,6 @@ async def handle_violation_close_activation(callback: types.CallbackQuery,
     await callback.message.answer("Вы уверены, что хотите ЗАКРЫТЬ данное нарушение?",
                                   reply_markup=generate_yes_no_keyboard())
     await state.set_state(ViolationCloseStates.close)
-    await callback.answer("Выбрано действие закрытия нарушения.")
 
 
 @router.message(ViolationCloseStates.close, F.text.in_(["✅ Да", "❌ Нет"]))
@@ -80,13 +80,12 @@ async def handle_violation_close_yes_no_response(message: types.Message, state: 
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
         if success:
             # обратная связь зафиксировавшему нарушение и в группу
-            await message.bot.send_message(chat_id=data["detector_tg"],
-                                           text=f"Нарушение №{data["id"]} закрыто.")
-            await message.bot.send_message(chat_id=settings.TG_GROUP_ID,
-                                           text=f"Нарушение №{data["id"]} закрыто.")
+            succsess_message  = f"Нарушение №{data["number"]} закрыто."
+            await message.bot.send_message(chat_id=data["detector_tg"], text=succsess_message)
+            await message.bot.send_message(chat_id=settings.TG_GROUP_ID, text=succsess_message)
 
-            log.success("Violation data {violation} updated to {new_status}", violation=data["id"],
-                        new_status=ViolationStatus.CORRECTED.name)
+            log.success("Violation data {violation}({number}) updated to {new_status}", violation=data["id"],
+                        number=data["number"], new_status=ViolationStatus.CORRECTED.name)
             await message.answer("Сообщение о закрытии нарушения отправлено пользователю и в группу.")
 
         else:
