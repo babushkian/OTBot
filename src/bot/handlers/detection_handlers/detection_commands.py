@@ -47,12 +47,18 @@ async def check_violation(message: types.Message,
         await message.reply("Нет нарушений для проверки.")
         return
 
-    violations_to_kb = tuple([{"id": violation.id,
-                               "btn_name": f"Нарушение №{violation.id}-{violation.area.name}"}
-                              for violation in violations])
+    violations_to_kb: list = []
+    for violation in violations:
+        btn_info = {
+            "id": violation.id,
+            "btn_name": f"Нарушение №{violation.number}-{violation.area.name}"
+        }
+        violations_to_kb.append(btn_info)
+
 
     violations_kb = await create_keyboard(items=violations_to_kb, text_key="btn_name",
                                           callback_factory=ViolationsFactory)
+    print(violations_kb)
     await message.answer("Выберите нарушение для проверки:", reply_markup=violations_kb)
     await state.set_state(ViolationStates.start)
 

@@ -1,5 +1,5 @@
 """Функция для создания inline клавиатуры."""
-from typing import Any
+from typing import Any, Iterable
 from collections.abc import Callable
 
 from aiogram.types import InlineKeyboardMarkup
@@ -9,7 +9,7 @@ from bot.keyboards.common_keyboards import CancelCallbackFactory
 from bot.keyboards.inline_keyboards.callback_factories import MultiSelectCallbackFactory
 
 
-async def create_keyboard(items: tuple,
+async def create_keyboard(items: Iterable[dict[str, Any]],
                           text_key: str,
                           callback_factory: Callable[..., Any],
                           ) -> InlineKeyboardMarkup:

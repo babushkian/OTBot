@@ -346,6 +346,7 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
         log.info("Violation data {user} update canceled", user=group_user.first_name)
 
 
+
 @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
 async def handle_violation_review(
     callback: types.CallbackQuery,
@@ -358,12 +359,14 @@ async def handle_violation_review(
     await state.update_data(id=callback_data.id)
     violation_repo = ViolationRepository(session)
     violation = await violation_repo.get_violation_by_id(callback_data.id)
-    # violation = await violation_repo.get_violation_by_id_new(callback_data.id)
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
-    await state.update_data(detector_tg=violation.detector.telegram_id,
-                            description=violation.description,
-                            area=violation.area.name)
+    await state.update_data(
+        number = violation.number,
+        detector_tg=violation.detector.telegram_id,
+        description=violation.description,
+        area=violation.area.name,
+    )
 
     # отправка акта нарушения для review
     pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
@@ -410,39 +413,43 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
         if success:
             # обратная связь зафиксировавшему нарушение
             await message.bot.send_message(chat_id=data["detector_tg"],
-                                           text=f"Нарушение №{data["id"]} одобрено администратором.")
+                                           text=f"Нарушение №{data["number"]} одобрено администратором.")
 
             # отправка в группу
             image_path = settings.DATA_DIR / Path(violation_data.files[0].path)
 
             jpeg_file = get_file(image_path)
 
-            caption_jpeg = f"Выявлено нарушение №{data['id']} в месте '{data['area']}'."
-            caption_pdf = f"Детали нарушения №{data['id']}"
+            caption_jpeg = f"Выявлено нарушение №{data["number"]} в месте '{data['area']}'."
+            caption_pdf = f"Детали нарушения №{data["number"]}"
 
             pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
             document = FSInputFile(pdf_file)
 
             try:
-                await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
-                                                document=BufferedInputFile(jpeg_file,
-                                                                           filename=f"Нарушение №{data['id']}.jpg"),
-                                                caption=caption_jpeg)
-                await message.bot.send_document(chat_id=settings.TG_GROUP_ID,
-                                                document=document,
-                                                caption=caption_pdf)
-                log.debug("Violation report {report} sent to group.", report=data["id"])
+                await message.bot.send_document(
+                    chat_id=settings.TG_GROUP_ID,
+                    document=BufferedInputFile(jpeg_file, filename=f"Нарушение №{data['number']}.jpg"),
+                    caption=caption_jpeg
+                )
+                await message.bot.send_document(
+                    chat_id=settings.TG_GROUP_ID,
+                    document=document,
+                    caption=caption_pdf
+                )
+                log.debug("Violation report {report}({number}) sent to group.", report=data["id"], number=data["number"])
             except Exception as e:
                 log.error("Error sending violation report to group.")
                 log.exception(e)
 
-            log.success("Violation data {violation} updated to {new_status}", violation=data["id"],
+            log.success("Violation data {violation}({number}) updated to {new_status}", violation=data["id"],
+                        number = data["number"],
                         new_status=ViolationStatus.ACTIVE.name)
             await message.answer("Нарушение отправлено группу.")
 
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
-            log.error("Error updating violation data {violation}", violation=data["id"])
+            log.error("Error updating violation data {violation}({number})", violation=data["id"], number=data["number"])
 
         await state.clear()
 
@@ -479,11 +486,11 @@ async def handle_detection_rejection_yes_no_response(message: types.Message, sta
         if success:
             # обратная связь зафиксировавшему нарушение
             await message.bot.send_message(chat_id=data["detector_tg"],
-                                           text=f"Нарушение №{data["id"]} ОТКЛОНЕНО администратором.")
-            log.success("Violation data id {violation} updated", violation=data["id"])
+                                           text=f"Нарушение №{data["number"]} ОТКЛОНЕНО администратором.")
+            log.success("Violation data id {violation}({number}) updated", violation=data["id"], number=data["number"])
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
-            log.error("Error updating violation id {violation} data ", violation=data["id"])
+            log.error("Error updating violation id {violation}({number}) data ", violation=data["id"], number=data["number"])
 
         await state.clear()
 
