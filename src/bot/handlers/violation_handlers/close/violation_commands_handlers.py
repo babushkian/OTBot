@@ -11,7 +11,7 @@ from bot.db.models import UserModel
 from bot.logger_config import log
 from bot.keyboards.common_keyboards import generate_yes_no_keyboard
 from bot.repositories.violation_repo import ViolationRepository
-from bot.handlers.violation_handlers.states import ViolationCloseStates
+from bot.handlers.violation_handlers.close.states import ViolationCloseStates
 from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ViolationsFactory, ViolationsActionFactory
@@ -81,8 +81,8 @@ async def handle_violation_close_yes_no_response(
         if success:
             # обратная связь зафиксировавшему нарушение и в группу
             succsess_message = f"Нарушение №{data['number']} закрыто."
-            await message.bot.send_message(chat_id=data["detector_tg"], text=succsess_message)
             await message.bot.send_message(chat_id=settings.TG_GROUP_ID, text=succsess_message)
+            await message.bot.send_message(chat_id=data["detector_tg"], text=succsess_message)
 
             log.success(
                 "Violation data {violation}({number}) updated to {new_status}",

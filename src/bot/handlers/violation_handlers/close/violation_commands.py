@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.enums import UserRole
 from bot.db.models import UserModel
 from bot.repositories.violation_repo import ViolationRepository
-from bot.handlers.violation_handlers.states import ViolationCloseStates
+from bot.handlers.violation_handlers.close.states import ViolationCloseStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ViolationsFactory
 

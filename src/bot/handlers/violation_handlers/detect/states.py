@@ -19,13 +19,3 @@ class DetectionStates(StatesGroup):
     select_category = State()
     select_actions_needed = State()
     completed = State()
-
-
-class ViolationStates(StatesGroup):
-    """Состояния нарушений."""
-
-    start = State()
-    review = State()
-
-    activate = State()
-    reject = State()
