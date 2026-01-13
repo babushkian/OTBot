@@ -5,5 +5,4 @@ from .violation_commands_handlers import router as violation_commands_handlers_r
 
 router = Router(name=__name__)
 
-router.include_routers(violation_commands_router,
-                       violation_commands_handlers_router)
+router.include_routers(violation_commands_router, violation_commands_handlers_router)

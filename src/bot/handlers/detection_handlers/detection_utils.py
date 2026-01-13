@@ -1,4 +1,5 @@
 """Утилиты при обнаружении нарушения."""
+
 from io import BytesIO
 from PIL import Image
 
@@ -36,6 +37,3 @@ async def merge_images(image_bytes_list: list[bytes], gap: int = 10) -> BytesIO:
     new_img.save(output, format="JPEG")
     output.seek(0)
     return output
-
-
-

@@ -1,4 +1,5 @@
 """Обработчики базовых команд."""
+
 from aiogram import F, Router, types
 from openpyxl.reader.excel import load_workbook
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,8 +20,7 @@ async def handle_contact_and_add_user(message: types.Message, session: AsyncSess
     if message.contact:
         user_phone = message.contact.phone_number
         await message.answer(
-            f"Спасибо. Вы успешно зарегистрировались с номером {user_phone}. "
-            f"Ожидайте одобрения от администратора.",
+            f"Спасибо. Вы успешно зарегистрировались с номером {user_phone}. Ожидайте одобрения от администратора.",
             reply_markup=types.ReplyKeyboardRemove(),
         )
     else:
@@ -51,8 +51,9 @@ async def handle_get_xlsx(message: types.Message) -> None:
                 file = await bot.get_file(file_id)
                 file_data = await bot.download_file(file.file_path)
                 excel_workbook = load_workbook(filename=file_data)
-                create_inline_buttons_from_excel(excel_workbook=excel_workbook,
-                                                 json_file=settings.violation_category_json_file)
+                create_inline_buttons_from_excel(
+                    excel_workbook=excel_workbook, json_file=settings.violation_category_json_file
+                )
             except Exception as e:
                 await message.reply(f"Произошла ошибка: {e!r}")
                 log.error("Error updating violation categories buttons.")

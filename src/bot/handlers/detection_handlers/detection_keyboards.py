@@ -10,11 +10,11 @@ from bot.keyboards.inline_keyboards.callback_factories import ViolationCategoryF
 async def violation_categories_first_kb() -> InlineKeyboardMarkup:
     """Клавиатуры для выбора категории нарушений."""
     buttons_json = read_categories_json_file()
-    first_keyboard_data = tuple([{"name": values["button_name"], "category": cell_id}
-                                 for cell_id, values in buttons_json[0].items()])
+    first_keyboard_data = tuple(
+        [{"name": values["button_name"], "category": cell_id} for cell_id, values in buttons_json[0].items()]
+    )
 
-    return await create_keyboard(items=first_keyboard_data, text_key="name",
-                                 callback_factory=ViolationCategoryFactory)
+    return await create_keyboard(items=first_keyboard_data, text_key="name", callback_factory=ViolationCategoryFactory)
 
 
 async def create_violation_keyboard_by_cell_id(cell_id: str) -> InlineKeyboardMarkup | None:
@@ -30,12 +30,14 @@ async def create_violation_keyboard_by_cell_id(cell_id: str) -> InlineKeyboardMa
     if next_button is None:
         return None
 
-    next_layer_data = tuple([{"name": button_cell_id, "category": button_name}
-                             for button_name, button_cell_id
-                             in next_button["button_values"].items()])
+    next_layer_data = tuple(
+        [
+            {"name": button_cell_id, "category": button_name}
+            for button_name, button_cell_id in next_button["button_values"].items()
+        ]
+    )
 
-    return await create_keyboard(items=next_layer_data, text_key="name",
-                                 callback_factory=ViolationCategoryFactory)
+    return await create_keyboard(items=next_layer_data, text_key="name", callback_factory=ViolationCategoryFactory)
 
 
 async def get_violation_category_by_cell_id(cell_id: str) -> str | None:

@@ -20,11 +20,13 @@ router = Router(name=__name__)
 
 
 @router.callback_query(ViolationsFactory.filter(), ViolationCloseStates.start)
-async def handle_violation_close(callback: types.CallbackQuery,
-                                 callback_data: ViolationsFactory,
-                                 state: FSMContext,
-                                 session: AsyncSession,
-                                 group_user: UserModel) -> None:
+async def handle_violation_close(
+    callback: types.CallbackQuery,
+    callback_data: ViolationsFactory,
+    state: FSMContext,
+    session: AsyncSession,
+    group_user: UserModel,
+) -> None:
     """Обработчик для просмотра нарушения."""
     await callback.answer()
     await state.update_data(id=callback_data.id)
@@ -37,7 +39,7 @@ async def handle_violation_close(callback: types.CallbackQuery,
         number=violation.number,
         detector_tg=violation.detector.telegram_id,
         description=violation.description,
-        area=violation.area.name
+        area=violation.area.name,
     )
 
     # отправка акта нарушения для проверки перед закрытием
@@ -49,9 +51,7 @@ async def handle_violation_close(callback: types.CallbackQuery,
     await callback.message.bot.send_document(chat_id=user_tg, document=document, caption=caption)
 
     actions_to_kb = ({"action": "activate", "name": "Закрыть нарушение"},)
-    action_kb = await create_keyboard(items=actions_to_kb,
-                                      text_key="name",
-                                      callback_factory=ViolationsActionFactory)
+    action_kb = await create_keyboard(items=actions_to_kb, text_key="name", callback_factory=ViolationsActionFactory)
 
     await callback.message.answer("Выберите действие:", reply_markup=action_kb)
     await state.set_state(ViolationCloseStates.review)
@@ -59,18 +59,18 @@ async def handle_violation_close(callback: types.CallbackQuery,
 
 
 @router.callback_query(ViolationsActionFactory.filter(F.action == "activate"), ViolationCloseStates.review)
-async def handle_violation_close_activation(callback: types.CallbackQuery,
-                                            state: FSMContext) -> None:
+async def handle_violation_close_activation(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для отправки уточнения при утверждении нарушения."""
-    await callback.message.answer("Вы уверены, что хотите ЗАКРЫТЬ данное нарушение?",
-                                  reply_markup=generate_yes_no_keyboard())
+    await callback.message.answer(
+        "Вы уверены, что хотите ЗАКРЫТЬ данное нарушение?", reply_markup=generate_yes_no_keyboard()
+    )
     await state.set_state(ViolationCloseStates.close)
 
 
 @router.message(ViolationCloseStates.close, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_violation_close_yes_no_response(message: types.Message, state: FSMContext,
-                                                 session: AsyncSession,
-                                                 group_user: UserModel) -> None:
+async def handle_violation_close_yes_no_response(
+    message: types.Message, state: FSMContext, session: AsyncSession, group_user: UserModel
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при рассмотрении нарушения для закрытия."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -80,12 +80,16 @@ async def handle_violation_close_yes_no_response(message: types.Message, state: 
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
         if success:
             # обратная связь зафиксировавшему нарушение и в группу
-            succsess_message  = f"Нарушение №{data["number"]} закрыто."
+            succsess_message = f"Нарушение №{data['number']} закрыто."
             await message.bot.send_message(chat_id=data["detector_tg"], text=succsess_message)
             await message.bot.send_message(chat_id=settings.TG_GROUP_ID, text=succsess_message)
 
-            log.success("Violation data {violation}({number}) updated to {new_status}", violation=data["id"],
-                        number=data["number"], new_status=ViolationStatus.CORRECTED.name)
+            log.success(
+                "Violation data {violation}({number}) updated to {new_status}",
+                violation=data["id"],
+                number=data["number"],
+                new_status=ViolationStatus.CORRECTED.name,
+            )
             await message.answer("Сообщение о закрытии нарушения отправлено пользователю и в группу.")
 
         else:

@@ -1,4 +1,5 @@
 """Обработчики команд для отчётов."""
+
 from datetime import datetime, timedelta
 
 from aiogram import Router, types
@@ -22,12 +23,13 @@ router = Router(name=__name__)
 
 
 @router.callback_query(ReportTypeFactory.filter())
-async def handle_report_type_select(callback: types.CallbackQuery,
-                                    callback_data: ReportTypeFactory,
-                                    state: FSMContext,
-                                    group_user: UserModel,
-                                    session: AsyncSession,
-                                    ) -> None:
+async def handle_report_type_select(
+    callback: types.CallbackQuery,
+    callback_data: ReportTypeFactory,
+    state: FSMContext,
+    group_user: UserModel,
+    session: AsyncSession,
+) -> None:
     """Обработка выбора типа отчёта."""
     violation_repo = ViolationRepository(session)
     match callback_data.type:
@@ -43,9 +45,9 @@ async def handle_report_type_select(callback: types.CallbackQuery,
                 {"per": "month", "name": "С начала месяца"},
                 {"per": "choose", "name": "Ввести интервал"},
             )
-            periods_kb = await create_keyboard(items=periods_to_kb,
-                                               text_key="name",
-                                               callback_factory=ReportPeriodFactory)
+            periods_kb = await create_keyboard(
+                items=periods_to_kb, text_key="name", callback_factory=ReportPeriodFactory
+            )
 
             await callback.message.answer("Выберите период:", reply_markup=periods_kb)
             await state.set_state(ReportStates.sum)
@@ -53,12 +55,9 @@ async def handle_report_type_select(callback: types.CallbackQuery,
 
         case "active":
             violations = await violation_repo.get_active_violations()
-            result_report = create_typst_report(violations=violations,
-                                                created_by=group_user)
+            result_report = create_typst_report(violations=violations, created_by=group_user)
             document = FSInputFile(result_report)
-            await callback.message.bot.send_document(chat_id=callback.from_user.id,
-                                                     document=document,
-                                                     caption="Отчёт.")
+            await callback.message.bot.send_document(chat_id=callback.from_user.id, document=document, caption="Отчёт.")
             await callback.message.answer("Отчёт сгенерирован.")
             await state.clear()
 
@@ -66,12 +65,9 @@ async def handle_report_type_select(callback: types.CallbackQuery,
 
         case "review":
             violations = await violation_repo.get_not_reviewed_violations()
-            result_report = create_typst_report(violations=violations,
-                                                created_by=group_user)
+            result_report = create_typst_report(violations=violations, created_by=group_user)
             document = FSInputFile(result_report)
-            await callback.message.bot.send_document(chat_id=callback.from_user.id,
-                                                     document=document,
-                                                     caption="Отчёт.")
+            await callback.message.bot.send_document(chat_id=callback.from_user.id, document=document, caption="Отчёт.")
             await callback.message.answer("Отчёт сгенерирован.")
             await state.clear()
 
@@ -92,9 +88,9 @@ async def handle_report_type_select(callback: types.CallbackQuery,
 
 
 @router.message(ReportStates.by_id)
-async def handle_report_by_id(message: types.Message, state: FSMContext,
-                              group_user: UserModel,
-                              session: AsyncSession) -> None:
+async def handle_report_by_id(
+    message: types.Message, state: FSMContext, group_user: UserModel, session: AsyncSession
+) -> None:
     """Обработка ввода номера нарушения."""
     violation_id = message.text
     verified_input = verify_string_as_integer(violation_id)
@@ -106,8 +102,7 @@ async def handle_report_by_id(message: types.Message, state: FSMContext,
     violation = await violation_repo.get_violation_by_number(int(violation_id))
     if violation is None:
         await message.answer("Не удалось найти отчёт по указанному номеру нарушения.")
-        log.warning("Error finding file {violation_id} violation report file not exists.",
-                    violation_id=violation_id)
+        log.warning("Error finding file {violation_id} violation report file not exists.", violation_id=violation_id)
         await state.clear()
         return
 
@@ -115,29 +110,32 @@ async def handle_report_by_id(message: types.Message, state: FSMContext,
         pdf_file = create_typst_report(violations=(violation,), created_by=group_user)
         document = FSInputFile(pdf_file)
         caption = f"Нарушение №{violation_id}"
-        await message.bot.send_document(chat_id=message.from_user.id,
-                                        document=document,
-                                        caption=caption)
+        await message.bot.send_document(chat_id=message.from_user.id, document=document, caption=caption)
         await state.clear()
 
     except Exception as e:
-        log.error("Error sending violation {violation_id} report to user {group_user}.",
-                  group_user=group_user.first_name,
-                  violation_id=violation_id)
+        log.error(
+            "Error sending violation {violation_id} report to user {group_user}.",
+            group_user=group_user.first_name,
+            violation_id=violation_id,
+        )
         log.exception(e)
     else:
-        log.debug("Violation report №{violation_id} sent to user {group_user}.",
-                  group_user=group_user.first_name,
-                  violation_id=violation_id)
+        log.debug(
+            "Violation report №{violation_id} sent to user {group_user}.",
+            group_user=group_user.first_name,
+            violation_id=violation_id,
+        )
 
 
-@router.callback_query(ReportStates.sum,
-                       ReportPeriodFactory.filter())
-async def handle_report_sum(callback: types.CallbackQuery,
-                            state: FSMContext,
-                            group_user: UserModel,
-                            session: AsyncSession,
-                            callback_data: ReportPeriodFactory) -> None:
+@router.callback_query(ReportStates.sum, ReportPeriodFactory.filter())
+async def handle_report_sum(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    group_user: UserModel,
+    session: AsyncSession,
+    callback_data: ReportPeriodFactory,
+) -> None:
     """Обработка ввода периода нарушения."""
     violation_repo = ViolationRepository(session)
     match callback_data.per:
@@ -154,9 +152,9 @@ async def handle_report_sum(callback: types.CallbackQuery,
             violations = await violation_repo.get_all_active_violations_by_date(start_date, end_date)
 
         case "month":
-            start_date = datetime(day=1,
-                                  month=datetime.now(tz=tz).month,
-                                  year=datetime.now(tz=tz).year).astimezone(tz=tz)
+            start_date = datetime(day=1, month=datetime.now(tz=tz).month, year=datetime.now(tz=tz).year).astimezone(
+                tz=tz
+            )
             end_date = datetime.now(tz=tz)
 
             if start_date == end_date:
@@ -166,10 +164,11 @@ async def handle_report_sum(callback: types.CallbackQuery,
 
         case "choose":
             await state.set_state(ReportStates.date_range)
-            await callback.message.answer("Введите интервал дат в формате\n: день-месяц-год начальной даты"
-                                          "[пробел]день-месяц-год конечной даты, например 01-01-2025 01-06-2025.\n"
-                                          "Начальная дата должна быть раньше даты окончания.",
-                                          )
+            await callback.message.answer(
+                "Введите интервал дат в формате\n: день-месяц-год начальной даты"
+                "[пробел]день-месяц-год конечной даты, например 01-01-2025 01-06-2025.\n"
+                "Начальная дата должна быть раньше даты окончания.",
+            )
             return
 
         case _:
@@ -183,12 +182,9 @@ async def handle_report_sum(callback: types.CallbackQuery,
         return
 
     try:
-        result_report = create_typst_report(violations=violations,
-                                            created_by=group_user)
+        result_report = create_typst_report(violations=violations, created_by=group_user)
         document = FSInputFile(result_report)
-        await callback.message.bot.send_document(chat_id=callback.from_user.id,
-                                                 document=document,
-                                                 caption="Отчёт.")
+        await callback.message.bot.send_document(chat_id=callback.from_user.id, document=document, caption="Отчёт.")
         await callback.message.answer("Отчёт сгенерирован.")
         await callback.answer("Отчёт сгенерирован.")
 
@@ -197,25 +193,24 @@ async def handle_report_sum(callback: types.CallbackQuery,
         log.exception(e)
     else:
         await state.clear()
-        log.debug("User {user} selected report type 'sum'.",
-                  user=group_user.first_name)
-        log.debug("User {user} generated report successfully.",
-                  user=group_user.first_name)
+        log.debug("User {user} selected report type 'sum'.", user=group_user.first_name)
+        log.debug("User {user} generated report successfully.", user=group_user.first_name)
 
 
 @router.message(ReportStates.date_range)
-async def handle_report_range(message: types.Message,
-                              group_user: UserModel,
-                              session: AsyncSession,
-                              state: FSMContext) -> None:
+async def handle_report_range(
+    message: types.Message, group_user: UserModel, session: AsyncSession, state: FSMContext
+) -> None:
     """Обработчик ввода интервала дат."""
     dates = validate_date_interval(message.text)
-    error_message = ("Неверный формат дат. "
-                     "Пример формата: день-месяц-год начальной даты[пробел]день-месяц-год конечной даты, "
-                     "например 01-01-2025 01-06-2025.\n"
-                     "Начальная дата должна быть раньше даты окончания.\n"
-                     "Число дней месяца и число не должны превышать максимальных значений."
-                     "Введите снова или нажмите кнопку отмена.")
+    error_message = (
+        "Неверный формат дат. "
+        "Пример формата: день-месяц-год начальной даты[пробел]день-месяц-год конечной даты, "
+        "например 01-01-2025 01-06-2025.\n"
+        "Начальная дата должна быть раньше даты окончания.\n"
+        "Число дней месяца и число не должны превышать максимальных значений."
+        "Введите снова или нажмите кнопку отмена."
+    )
     if not dates:
         await message.answer(error_message)
         await state.set_state(ReportStates.date_range)
@@ -225,11 +220,8 @@ async def handle_report_range(message: types.Message,
     if not violations:
         await message.answer("В выбранном периоде отчёт пуст.")
         return
-    result_report = create_typst_report(violations=violations,
-                                        created_by=group_user)
+    result_report = create_typst_report(violations=violations, created_by=group_user)
     document = FSInputFile(result_report)
-    await message.bot.send_document(chat_id=message.from_user.id,
-                                    document=document,
-                                    caption="Отчёт.")
+    await message.bot.send_document(chat_id=message.from_user.id, document=document, caption="Отчёт.")
     await message.answer("Отчёт сгенерирован.")
     await state.clear()

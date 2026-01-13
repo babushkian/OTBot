@@ -5,6 +5,7 @@ from bot.handlers.base_handlers.base_comand_hendlers import router as base_comma
 
 router = Router(name=__name__)
 
-router.include_routers(base_command_router,
-                       base_command_handler_router,
-                       )
+router.include_routers(
+    base_command_router,
+    base_command_handler_router,
+)

@@ -1,4 +1,5 @@
 """Состояния заполнения данных для подтверждения пользователя."""
+
 from aiogram.fsm.state import State, StatesGroup
 
 

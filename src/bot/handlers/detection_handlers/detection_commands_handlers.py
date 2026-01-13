@@ -1,4 +1,5 @@
 """Обработчики обнаружения нарушений."""
+
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -48,19 +49,21 @@ router = Router(name=__name__)
 
 @dataclass
 class MediaGroupContext:
-    photos: list[bytes] = field(default_factory=list)   # список фото
-    caption: str | None = None                      # подпись
+    photos: list[bytes] = field(default_factory=list)  # список фото
+    caption: str | None = None  # подпись
     event: asyncio.Event = field(default_factory=asyncio.Event)  # для сброса таймера
-    task: asyncio.Task | None = None                # ссылка на запущенную задачу
+    task: asyncio.Task | None = None  # ссылка на запущенную задачу
+
 
 media_groups: dict[str, MediaGroupContext] = defaultdict(MediaGroupContext)
 
 
 @router.message(DetectionStates.send_photo, F.media_group_id)
-async def handle_media_group(message: types.Message,
-                             state: FSMContext,
-                             group_user: UserModel,
-                             ) -> None:
+async def handle_media_group(
+    message: types.Message,
+    state: FSMContext,
+    group_user: UserModel,
+) -> None:
     """Обрабатывает MediaGroup (отправку нескольких фото в одном сообщении) при обнаружении нарушения."""
     log.info("добавление изображения в медиагруппу")
     if not message.photo:
@@ -85,11 +88,9 @@ async def handle_media_group(message: types.Message,
         ctx.event.set()
 
 
-
-async def process_media_group_after_delay(message: types.Message,
-                                          state: FSMContext,
-                                          group_user: UserModel,
-                                          media_group_id: str) -> None:
+async def process_media_group_after_delay(
+    message: types.Message, state: FSMContext, group_user: UserModel, media_group_id: str
+) -> None:
     """Завершает обработку MediaGroup после задержки."""
     log.info("окончательная обработка медиагруппы")
     # возможно, нужно обернуть всю функцию в try fimally
@@ -119,11 +120,12 @@ async def process_media_group_after_delay(message: types.Message,
 
 @router.message(DetectionStates.send_photo)
 # для обработки медиагруппы не нужен фильтр состояния, так как она вызывается напрямую из process_media_group_after_delay
-async def handle_get_violation_photo(message: types.Message,
-                                     state: FSMContext,
-                                     group_user: UserModel,
-                                     session: AsyncSession,
-                                     ) -> None:
+async def handle_get_violation_photo(
+    message: types.Message,
+    state: FSMContext,
+    group_user: UserModel,
+    session: AsyncSession,
+) -> None:
     """Обрабатывает получение фото нарушения."""
     log.info("обработка одиночного изображения")
     if not message.photo:
@@ -136,7 +138,7 @@ async def handle_get_violation_photo(message: types.Message,
     description = message.caption or data.get("caption", None) or "Без описания"
     if current_state == "DetectionStates:send_media_group":
         # несколько объединённых фото
-        images= data["images"]
+        images = data["images"]
         log.info("несколько фото")
     else:
         # одно фото
@@ -145,18 +147,18 @@ async def handle_get_violation_photo(message: types.Message,
         file = await message.bot.get_file(file_id)
         picture = await message.bot.download_file(file.file_path)
         images = [picture.read()]
-    await state.update_data(images=images,
-                            description=description,
-                            detector_id=group_user.id,
-                            status=ViolationStatus.REVIEW)
+    await state.update_data(
+        images=images, description=description, detector_id=group_user.id, status=ViolationStatus.REVIEW
+    )
 
     area_repo = AreaRepository(session)
     areas = await area_repo.get_all_areas()
 
     areas_to_kb = [{"area_name": area.name, "id": area.id} for area in areas] if areas else []
 
-    areas_keyboard = await create_keyboard(items=tuple(areas_to_kb), text_key="area_name",
-                                           callback_factory=AreaSelectFactory)
+    areas_keyboard = await create_keyboard(
+        items=tuple(areas_to_kb), text_key="area_name", callback_factory=AreaSelectFactory
+    )
 
     await message.reply("Выберите место нарушения:", reply_markup=areas_keyboard)
     log.debug(f"User {group_user.first_name} sent photo for detection.")
@@ -165,11 +167,12 @@ async def handle_get_violation_photo(message: types.Message,
 
 
 @router.callback_query(AreaSelectFactory.filter(), DetectionStates.enter_area)
-async def handle_set_area_and_first_layer_violation_category(callback: types.CallbackQuery,
-                                                             state: FSMContext,
-                                                             callback_data: AreaSelectFactory,
-                                                             group_user: UserModel,
-                                                             ) -> None:
+async def handle_set_area_and_first_layer_violation_category(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    callback_data: AreaSelectFactory,
+    group_user: UserModel,
+) -> None:
     """Обрабатывает выбор места нарушения и отдаёт выбор первого уровня категории нарушения."""
     await state.update_data(area_id=callback_data.id)
 
@@ -185,11 +188,12 @@ async def handle_set_area_and_first_layer_violation_category(callback: types.Cal
 
 
 @router.callback_query(ViolationCategoryFactory.filter(), DetectionStates.next_layer_select_category)
-async def handle_set_second_layer_violation_category(callback: types.CallbackQuery,
-                                                     state: FSMContext,
-                                                     callback_data: ViolationCategoryFactory,
-                                                     group_user: UserModel,
-                                                     ) -> None:
+async def handle_set_second_layer_violation_category(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    callback_data: ViolationCategoryFactory,
+    group_user: UserModel,
+) -> None:
     """Обрабатывает выбор второго уровня вложенности места нарушения."""
     # получение содержания первого уровня категории
     next_layer_keyboard_key = callback_data.category
@@ -197,8 +201,9 @@ async def handle_set_second_layer_violation_category(callback: types.CallbackQue
 
     if next_violation_keyboard is not None:
         # следующий уровень клавиатуры
-        await callback.message.answer("Выберите подкатегорию категорию нарушения:",
-                                      reply_markup=next_violation_keyboard)
+        await callback.message.answer(
+            "Выберите подкатегорию категорию нарушения:", reply_markup=next_violation_keyboard
+        )
         await callback.answer("Выбран второй уровень категории нарушения.")
         await state.set_state(DetectionStates.next_layer_select_category)
     else:
@@ -207,21 +212,22 @@ async def handle_set_second_layer_violation_category(callback: types.CallbackQue
 
 
 @router.callback_query(ViolationCategoryFactory.filter(), DetectionStates.select_category)
-async def handle_set_violation_category(callback: types.CallbackQuery,
-                                        state: FSMContext,
-                                        callback_data: ViolationCategoryFactory,
-                                        group_user: UserModel,
-                                        ) -> None:
+async def handle_set_violation_category(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    callback_data: ViolationCategoryFactory,
+    group_user: UserModel,
+) -> None:
     """Обрабатывает заполнение категории нарушения."""
     category = await get_violation_category_by_cell_id(callback_data.category)
     await state.update_data(category=category)
     actions = [line["action"] for line in action_needed_deadline()]
-    actions_to_kb = [{"id": index, "text": action[:200]} for index, action
-                     in enumerate(actions, start=1)]
+    actions_to_kb = [{"id": index, "text": action[:200]} for index, action in enumerate(actions, start=1)]
 
-    await callback.message.answer("Выберите мероприятия для устранения нарушения:",
-                                  reply_markup=await create_multi_select_keyboard(items=actions_to_kb),
-                                  )
+    await callback.message.answer(
+        "Выберите мероприятия для устранения нарушения:",
+        reply_markup=await create_multi_select_keyboard(items=actions_to_kb),
+    )
     await callback.answer("Выбрана категория нарушения.")
 
     await state.set_state(DetectionStates.select_actions_needed)
@@ -246,9 +252,9 @@ async def handle_multi_select(callback: types.CallbackQuery, callback_data: Mult
             factory = MultiSelectCallbackFactory.unpack(button.callback_data)
             if factory.action == "select" and factory.id == item_id:
                 button.text = f"{'✅' if new_selected else '❌'} {button.text.split(' ', 1)[1]}"
-                button.callback_data = MultiSelectCallbackFactory(id=item_id,
-                                                                  action="select",
-                                                                  selected=new_selected).pack()
+                button.callback_data = MultiSelectCallbackFactory(
+                    id=item_id, action="select", selected=new_selected
+                ).pack()
             updated_row.append(button)
         updated_keyboard.append(updated_row)
 
@@ -258,11 +264,8 @@ async def handle_multi_select(callback: types.CallbackQuery, callback_data: Mult
     log.debug(f"User {callback.from_user.first_name} selected item {item_id}.")
 
 
-@router.callback_query(MultiSelectCallbackFactory.filter(F.action == "ok"),
-                       DetectionStates.select_actions_needed)
-async def handle_ok_button(callback: types.CallbackQuery,
-                           state: FSMContext,
-                           session: AsyncSession) -> None:
+@router.callback_query(MultiSelectCallbackFactory.filter(F.action == "ok"), DetectionStates.select_actions_needed)
+async def handle_ok_button(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
     """Обработчик для кнопки "ОК" после выбора мероприятий для устранения нарушения."""
     keyboard = callback.message.reply_markup.inline_keyboard
     selected_ids = []
@@ -287,25 +290,26 @@ async def handle_ok_button(callback: types.CallbackQuery,
     await callback.message.bot.send_photo(chat_id=user_tg, photo=photo_file, caption=caption)
     photos_text = ("Прикреплены", "фотографии") if len(data["images"]) > 1 else ("Прикреплена", "фотография")
     # текст для проверки
-    actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
-    data_text = (f"\nМесто нарушения: {area.name}\n"
-                 f"Описание: {data['description']}\n"
-                 f"{photos_text[0]} {len(data["images"])} {photos_text[1]}.\n"
-                 f"Категория: {data['category']}\n"
-                 f"Требуемые мероприятия: {',\n'.join(actions[index - 1][:100]
-                                                      for index in data['actions_needed'])}")
+    actions = [f"{line['action']}. Срок устранения: {line['fix_time']}" for line in action_needed_deadline()]
+    data_text = (
+        f"\nМесто нарушения: {area.name}\n"
+        f"Описание: {data['description']}\n"
+        f"{photos_text[0]} {len(data['images'])} {photos_text[1]}.\n"
+        f"Категория: {data['category']}\n"
+        f"Требуемые мероприятия: {',\n'.join(actions[index - 1][:100] for index in data['actions_needed'])}"
+    )
 
-    await callback.message.answer("Ввод данных завершен.\n\n"
-                                  "Введённые данные:\n"
-                                  f"{data_text}.\n\n"
-                                  f"Всё верно?\n", reply_markup=generate_yes_no_keyboard())
+    await callback.message.answer(
+        f"Ввод данных завершен.\n\nВведённые данные:\n{data_text}.\n\nВсё верно?\n",
+        reply_markup=generate_yes_no_keyboard(),
+    )
     await state.set_state(DetectionStates.completed)
 
 
 @router.message(DetectionStates.completed, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_detection_yes_no_response(message: types.Message, state: FSMContext,
-                                           session: AsyncSession,
-                                           group_user: UserModel) -> None:
+async def handle_detection_yes_no_response(
+    message: types.Message, state: FSMContext, session: AsyncSession, group_user: UserModel
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при обнаружении нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -322,13 +326,15 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
             # admins_telegrams = [admin["telegram_id"] for admin in admins if admin["is_active"]==True]
             # for admin_id in admins_telegrams:
             for admin_id in settings.SUPER_USERS_TG_ID:
-                await message.bot.send_message(admin_id,
-                                               text=f"Новое нарушение:\n"
-                                                    f"Описание: '{data['description']}'.\n"
-                                                    f"Зафиксировано {group_user.first_name}.\n"
-                                                    f"Номер нарушения {success.number}.\n"
-                                                    f"Для проверки используйте команду /check.")
-            log.debug("Notification sent to {admins}", admins= settings.SUPER_USERS_TG_ID)
+                await message.bot.send_message(
+                    admin_id,
+                    text=f"Новое нарушение:\n"
+                    f"Описание: '{data['description']}'.\n"
+                    f"Зафиксировано {group_user.first_name}.\n"
+                    f"Номер нарушения {success.number}.\n"
+                    f"Для проверки используйте команду /check.",
+                )
+            log.debug("Notification sent to {admins}", admins=settings.SUPER_USERS_TG_ID)
             # log.debug("Notification sent to {admins}", admins=admins_telegrams)
             await message.answer("Нарушение отправлено администраторам на одобрение.")
         else:
@@ -341,7 +347,6 @@ async def handle_detection_yes_no_response(message: types.Message, state: FSMCon
         await message.answer("Заполнение отменено, для повторного вызовите команду /detect.")
         await state.clear()
         log.info("Violation data {user} update canceled", user=group_user.first_name)
-
 
 
 @router.callback_query(ViolationsFactory.filter(), ViolationStates.start)
@@ -359,7 +364,7 @@ async def handle_violation_review(
     if violation is None:
         log.error("Не существует нарушения с id={id}", id=callback_data.id)
     await state.update_data(
-        number = violation.number,
+        number=violation.number,
         detector_tg=violation.detector.telegram_id,
         description=violation.description,
         area=violation.area.name,
@@ -373,11 +378,8 @@ async def handle_violation_review(
 
     await callback.message.bot.send_document(chat_id=user_tg, document=document, caption=caption)
 
-    actions_to_kb = ({"action": "activate", "name": "Утвердить"},
-                     {"action": "reject", "name": "Отклонить"})
-    action_kb = await create_keyboard(items=actions_to_kb,
-                                      text_key="name",
-                                      callback_factory=ViolationsActionFactory)
+    actions_to_kb = ({"action": "activate", "name": "Утвердить"}, {"action": "reject", "name": "Отклонить"})
+    action_kb = await create_keyboard(items=actions_to_kb, text_key="name", callback_factory=ViolationsActionFactory)
 
     await callback.message.answer("Выберите действие:", reply_markup=action_kb)
     await state.set_state(ViolationStates.review)
@@ -386,19 +388,19 @@ async def handle_violation_review(
 
 
 @router.callback_query(ViolationsActionFactory.filter(F.action == "activate"), ViolationStates.review)
-async def handle_violation_activate(callback: types.CallbackQuery,
-                                    state: FSMContext) -> None:
+async def handle_violation_activate(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для отправки уточнения при утверждении нарушения."""
-    await callback.message.answer("Вы уверены, что хотите УТВЕРДИТЬ данное нарушение?",
-                                  reply_markup=generate_yes_no_keyboard())
+    await callback.message.answer(
+        "Вы уверены, что хотите УТВЕРДИТЬ данное нарушение?", reply_markup=generate_yes_no_keyboard()
+    )
     await state.set_state(ViolationStates.activate)
     await callback.answer("Выбрано действие утверждения.")
 
 
 @router.message(ViolationStates.activate, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_detection_activation_yes_no_response(message: types.Message, state: FSMContext,
-                                                      session: AsyncSession,
-                                                      group_user: UserModel) -> None:
+async def handle_detection_activation_yes_no_response(
+    message: types.Message, state: FSMContext, session: AsyncSession, group_user: UserModel
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при рассмотрении нарушения для одобрения."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -409,16 +411,17 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
         violation_data = await violation_repo.get_violation_by_id(violation_id=data["id"])
         if success:
             # обратная связь зафиксировавшему нарушение
-            await message.bot.send_message(chat_id=data["detector_tg"],
-                                           text=f"Нарушение №{data["number"]} одобрено администратором.")
+            await message.bot.send_message(
+                chat_id=data["detector_tg"], text=f"Нарушение №{data['number']} одобрено администратором."
+            )
 
             # отправка в группу
             image_path = settings.DATA_DIR / Path(violation_data.files[0].path)
 
             jpeg_file = get_file(image_path)
 
-            caption_jpeg = f"Выявлено нарушение №{data["number"]} в месте '{data['area']}'."
-            caption_pdf = f"Детали нарушения №{data["number"]}"
+            caption_jpeg = f"Выявлено нарушение №{data['number']} в месте '{data['area']}'."
+            caption_pdf = f"Детали нарушения №{data['number']}"
 
             pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
             document = FSInputFile(pdf_file)
@@ -427,26 +430,29 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
                 await message.bot.send_document(
                     chat_id=settings.TG_GROUP_ID,
                     document=BufferedInputFile(jpeg_file, filename=f"Нарушение №{data['number']}.jpg"),
-                    caption=caption_jpeg
+                    caption=caption_jpeg,
                 )
-                await message.bot.send_document(
-                    chat_id=settings.TG_GROUP_ID,
-                    document=document,
-                    caption=caption_pdf
+                await message.bot.send_document(chat_id=settings.TG_GROUP_ID, document=document, caption=caption_pdf)
+                log.debug(
+                    "Violation report {report}({number}) sent to group.", report=data["id"], number=data["number"]
                 )
-                log.debug("Violation report {report}({number}) sent to group.", report=data["id"], number=data["number"])
             except Exception as e:
                 log.error("Error sending violation report to group.")
                 log.exception(e)
 
-            log.success("Violation data {violation}({number}) updated to {new_status}", violation=data["id"],
-                        number = data["number"],
-                        new_status=ViolationStatus.ACTIVE.name)
+            log.success(
+                "Violation data {violation}({number}) updated to {new_status}",
+                violation=data["id"],
+                number=data["number"],
+                new_status=ViolationStatus.ACTIVE.name,
+            )
             await message.answer("Нарушение отправлено группу.")
 
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
-            log.error("Error updating violation data {violation}({number})", violation=data["id"], number=data["number"])
+            log.error(
+                "Error updating violation data {violation}({number})", violation=data["id"], number=data["number"]
+            )
 
         await state.clear()
 
@@ -456,23 +462,23 @@ async def handle_detection_activation_yes_no_response(message: types.Message, st
         log.info("Violation data {user} update canceled", user=group_user.first_name)
 
 
-
-
 @router.callback_query(ViolationsActionFactory.filter(F.action == "reject"), ViolationStates.review)
-async def handle_violation_reject(callback: types.CallbackQuery,
-                                  state: FSMContext,
-                                  ) -> None:
+async def handle_violation_reject(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
     """Обработчик для отправки уточнения при отклонении нарушения."""
-    await callback.message.answer("Вы уверены, что хотите ОТКЛОНИТЬ данное нарушение?\n",
-                                  reply_markup=generate_yes_no_keyboard())
+    await callback.message.answer(
+        "Вы уверены, что хотите ОТКЛОНИТЬ данное нарушение?\n", reply_markup=generate_yes_no_keyboard()
+    )
     await state.set_state(ViolationStates.reject)
     await callback.answer("Выбрано действие отклонения.")
 
 
 @router.message(ViolationStates.reject, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_detection_rejection_yes_no_response(message: types.Message, state: FSMContext,
-                                                     session: AsyncSession,
-                                                     group_user: UserModel) -> None:
+async def handle_detection_rejection_yes_no_response(
+    message: types.Message, state: FSMContext, session: AsyncSession, group_user: UserModel
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при отклонении нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -482,12 +488,15 @@ async def handle_detection_rejection_yes_no_response(message: types.Message, sta
         success = await violation_repo.update_violation(violation_id=data["id"], update_data=new_status)
         if success:
             # обратная связь зафиксировавшему нарушение
-            await message.bot.send_message(chat_id=data["detector_tg"],
-                                           text=f"Нарушение №{data["number"]} ОТКЛОНЕНО администратором.")
+            await message.bot.send_message(
+                chat_id=data["detector_tg"], text=f"Нарушение №{data['number']} ОТКЛОНЕНО администратором."
+            )
             log.success("Violation data id {violation}({number}) updated", violation=data["id"], number=data["number"])
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
-            log.error("Error updating violation id {violation}({number}) data ", violation=data["id"], number=data["number"])
+            log.error(
+                "Error updating violation id {violation}({number}) data ", violation=data["id"], number=data["number"]
+            )
 
         await state.clear()
 

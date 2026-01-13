@@ -1,4 +1,5 @@
 """Состояния для обнаружения нарушений."""
+
 from aiogram.fsm.state import State, StatesGroup
 
 

@@ -1,4 +1,5 @@
 """Обработчики команд места нарушения."""
+
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,10 +27,11 @@ router = Router(name=__name__)
 
 # TODO REFACTOR разнести логику добавления и обновления в разные файлы
 
+
 @router.callback_query(AreaSelectFactory.filter(), AreaAddOrUpdateStates.start)
-async def update_or_add_area(callback: types.CallbackQuery,
-                             callback_data: AreaSelectFactory,
-                             state: FSMContext) -> None:
+async def update_or_add_area(
+    callback: types.CallbackQuery, callback_data: AreaSelectFactory, state: FSMContext
+) -> None:
     """Обрабатывает кнопку обновления или добавления места нарушения."""
     if callback_data.id == 0:
         await callback.message.answer("Введите название места нарушения:", reply_markup=generate_cancel_button())
@@ -38,30 +40,32 @@ async def update_or_add_area(callback: types.CallbackQuery,
         return
 
     areas_fields_to_kb = tuple(get_fields_with_translations(line_id=callback_data.id))
-    fields_kb = await create_keyboard(items=areas_fields_to_kb, text_key="translation",
-                                      callback_factory=AreaFieldToUpdateFactory)
+    fields_kb = await create_keyboard(
+        items=areas_fields_to_kb, text_key="translation", callback_factory=AreaFieldToUpdateFactory
+    )
 
     await callback.message.answer("Выберите поле для корректировки:", reply_markup=fields_kb)
     await callback.answer("Выбрано место нарушения для обновления данных.")
 
 
 @router.callback_query(AreaFieldToUpdateFactory.filter(), AreaAddOrUpdateStates.start)
-async def update_selected_area_field(callback: types.CallbackQuery,
-                                     callback_data: AreaFieldToUpdateFactory,
-                                     session: AsyncSession,
-                                     state: FSMContext) -> None:
+async def update_selected_area_field(
+    callback: types.CallbackQuery, callback_data: AreaFieldToUpdateFactory, session: AsyncSession, state: FSMContext
+) -> None:
     """Обрабатывает кнопку выбранного поля для обновления данных места нарушения."""
     await state.update_data({"id": callback_data.id, "field_name": callback_data.field_name})
     if callback_data.field_name == "responsible_user_id":
         user_repo = UserRepository(session)
         responsible_users = await user_repo.get_users_by_role(UserRole.RESPONSIBLE)
-        users_to_kb = [{"name": user["first_name"], "id": user["id"], "responsible_name": user["first_name"]}
-                       for user in responsible_users]
+        users_to_kb = [
+            {"name": user["first_name"], "id": user["id"], "responsible_name": user["first_name"]}
+            for user in responsible_users
+        ]
         users_to_kb.append({"name": "Ввести вручную", "id": 0, "responsible_name": "Ввод вручную"})
 
-        users_keyboard = await create_keyboard(items=tuple(users_to_kb),
-                                               callback_factory=ResponsibleForAreaFactory,
-                                               text_key="name")
+        users_keyboard = await create_keyboard(
+            items=tuple(users_to_kb), callback_factory=ResponsibleForAreaFactory, text_key="name"
+        )
 
         await callback.message.answer("Выберите ответственного", reply_markup=users_keyboard)
         await state.set_state(AreaAddOrUpdateStates.update_responsible)
@@ -74,10 +78,9 @@ async def update_selected_area_field(callback: types.CallbackQuery,
 
 
 @router.callback_query(ResponsibleForAreaFactory.filter(), AreaAddOrUpdateStates.update_responsible)
-async def update_area_responsible_user_id(callback: types.CallbackQuery,
-                                          callback_data: ResponsibleForAreaFactory,
-                                          state: FSMContext,
-                                          session: AsyncSession) -> None:
+async def update_area_responsible_user_id(
+    callback: types.CallbackQuery, callback_data: ResponsibleForAreaFactory, state: FSMContext, session: AsyncSession
+) -> None:
     """Обновление текстового поля места нарушения."""
     value_to_update = callback_data.id
     data = await state.get_data()
@@ -93,9 +96,7 @@ async def update_area_responsible_user_id(callback: types.CallbackQuery,
 
 
 @router.message(AreaAddOrUpdateStates.update_field)
-async def update_any_area_field(message: types.Message,
-                                state: FSMContext,
-                                session: AsyncSession) -> None:
+async def update_any_area_field(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обновление ответственного пользователя из зарегистрированных для места нарушения."""
     value_to_update = message.text
     data = await state.get_data()
@@ -119,22 +120,22 @@ async def add_area_name(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(AreaAddOrUpdateStates.enter_area_description)
-async def add_area_description(message: types.Message,
-                               state: FSMContext,
-                               session: AsyncSession) -> None:
+async def add_area_description(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка описания места нарушения."""
     area_description = message.text
     await state.update_data(description=area_description)
     await state.set_state(AreaAddOrUpdateStates.enter_responsible)
     user_repo = UserRepository(session)
     responsible_users = await user_repo.get_users_by_role(UserRole.RESPONSIBLE)
-    users_to_kb = [{"name": user["first_name"], "id": user["id"], "responsible_name": user["first_name"]}
-                   for user in responsible_users]
+    users_to_kb = [
+        {"name": user["first_name"], "id": user["id"], "responsible_name": user["first_name"]}
+        for user in responsible_users
+    ]
     users_to_kb.append({"name": "Ввести вручную", "id": 0, "responsible_name": "Ввод вручную"})
 
-    users_keyboard = await create_keyboard(items=tuple(users_to_kb),
-                                           callback_factory=ResponsibleForAreaFactory,
-                                           text_key="name")
+    users_keyboard = await create_keyboard(
+        items=tuple(users_to_kb), callback_factory=ResponsibleForAreaFactory, text_key="name"
+    )
     # builder = InlineKeyboardBuilder()
     # for row in users_keyboard.inline_keyboard:
     #     builder.row(*row)
@@ -143,48 +144,50 @@ async def add_area_description(message: types.Message,
     await message.answer("Выберите ответственного", reply_markup=users_keyboard)
 
 
-@router.callback_query(ResponsibleForAreaFactory.filter(F.id==0), AreaAddOrUpdateStates.enter_responsible)
-async def select_manual_area_responsible_user(callback: types.CallbackQuery,
-                                       state: FSMContext) -> None:
+@router.callback_query(ResponsibleForAreaFactory.filter(F.id == 0), AreaAddOrUpdateStates.enter_responsible)
+async def select_manual_area_responsible_user(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Добавляет к месту нарушения ответственного, введенного вручную (его нет в базе)."""
     await callback.message.answer("Введите ФИО ответственного:", reply_markup=generate_cancel_button())
     await state.set_state(AreaAddOrUpdateStates.enter_responsible_text)
     await callback.answer()
 
 
-@router.callback_query(ResponsibleForAreaFactory.filter(F.id>0), AreaAddOrUpdateStates.enter_responsible)
-async def select_area_responsible_user(callback: types.CallbackQuery,
-                                       callback_data: ResponsibleForAreaFactory,
-                                       state: FSMContext,
-                                       session: AsyncSession,
-                                       ) -> None:
+@router.callback_query(ResponsibleForAreaFactory.filter(F.id > 0), AreaAddOrUpdateStates.enter_responsible)
+async def select_area_responsible_user(
+    callback: types.CallbackQuery,
+    callback_data: ResponsibleForAreaFactory,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
     """Обрабатывает кнопку ответственного, который содержится в базе."""
     await state.update_data(responsible_user_id=callback_data.id)
     data = await state.get_data()
     user_repo = UserRepository(session)
     responsible = await user_repo.get_user_by_id(data["responsible_user_id"])
     if responsible:
-        data_text = (f"\nМесто нарушения: {data['name']}\n"
-                     f"Описание: {data['description']}\n"
-                     f"Ответственный: {responsible.first_name}\n")
+        data_text = (
+            f"\nМесто нарушения: {data['name']}\n"
+            f"Описание: {data['description']}\n"
+            f"Ответственный: {responsible.first_name}\n"
+        )
 
-        await callback.message.answer("Ввод данных завершен.\n"
-                                      "Введённые данные:\n"
-                                      f"{data_text}\n"
-                                      f"Всё верно?", reply_markup=generate_yes_no_keyboard())
+        await callback.message.answer(
+            f"Ввод данных завершен.\nВведённые данные:\n{data_text}\nВсё верно?",
+            reply_markup=generate_yes_no_keyboard(),
+        )
         await callback.answer("Выбран ответственный из списка.")
-        log.success("Responsible id user chosen with name {responsible} saved in data state",
-                    responsible=responsible.first_name)
+        log.success(
+            "Responsible id user chosen with name {responsible} saved in data state", responsible=responsible.first_name
+        )
         await state.set_state(AreaAddOrUpdateStates.completed)
         await callback.answer()
         return
 
-    await callback.message.answer(text = "Выбранный ответственный не найден в базе\n"
-                                         "Начать с начала? /area",
-                                  parse_mode="HTML")
+    await callback.message.answer(
+        text="Выбранный ответственный не найден в базе\nНачать с начала? /area", parse_mode="HTML"
+    )
     await state.clear()
     await callback.answer()
-
 
 
 @router.message(AreaAddOrUpdateStates.enter_responsible_text)
@@ -193,33 +196,35 @@ async def add_area_responsible(message: types.Message, state: FSMContext) -> Non
     try:
         responsible_text = verify_string_as_filename(message.text)
     except StringInputError as e:
-        await message.answer(text=f"Неверно введены данные. \n{e.args[0]}.\n"
-                                  f"Начать с начала? /area",
-                             parse_mode="HTML")
-        log.warning("Wrong input for user name: {text}, by user {message}",
-                    message=message.from_user.id, text=message.text)
+        await message.answer(text=f"Неверно введены данные. \n{e.args[0]}.\nНачать с начала? /area", parse_mode="HTML")
+        log.warning(
+            "Wrong input for user name: {text}, by user {message}", message=message.from_user.id, text=message.text
+        )
         await state.clear()
         return
 
     await state.update_data(responsible_text=responsible_text)
     data = await state.get_data()
 
-    data_text = (f"\nМесто нарушения: {data['name']}\n"
-                 f"Описание: {data['description']}\n"
-                 f"Ответственный: {data['responsible_text']}\n")
+    data_text = (
+        f"\nМесто нарушения: {data['name']}\n"
+        f"Описание: {data['description']}\n"
+        f"Ответственный: {data['responsible_text']}\n"
+    )
 
-    await message.answer("Ввод данных завершен.\n"
-                         "Введённые данные:\n"
-                         f"{data_text}\n"
-                         f"Всё верно?", reply_markup=generate_yes_no_keyboard())
+    await message.answer(
+        f"Ввод данных завершен.\nВведённые данные:\n{data_text}\nВсё верно?", reply_markup=generate_yes_no_keyboard()
+    )
 
     await state.set_state(AreaAddOrUpdateStates.completed)
 
 
 @router.message(AreaAddOrUpdateStates.completed, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_yes_no_response(message: types.Message, state: FSMContext,
-                                 session: AsyncSession,
-                                 ) -> None:
+async def handle_yes_no_response(
+    message: types.Message,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при добавлении маста нарушения."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -235,7 +240,7 @@ async def handle_yes_no_response(message: types.Message, state: FSMContext,
 
         success = await area_repo.add_area(area)
         if success:
-            await message.answer(f"Данные места нарушения {data["name"]} добавлены.")
+            await message.answer(f"Данные места нарушения {data['name']} добавлены.")
             log.success("Area data {area} added", area=data["name"])
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
@@ -250,10 +255,11 @@ async def handle_yes_no_response(message: types.Message, state: FSMContext,
 
 
 @router.callback_query(AreaDeleteFactory.filter())
-async def delete_area(callback: types.CallbackQuery,
-                      callback_data: AreaDeleteFactory,
-                      session: AsyncSession,
-                      ) -> None:
+async def delete_area(
+    callback: types.CallbackQuery,
+    callback_data: AreaDeleteFactory,
+    session: AsyncSession,
+) -> None:
     """Обрабатывает кнопку удаления места нарушения."""
     area_id = callback_data.id
     area_repo = AreaRepository(session)
@@ -263,5 +269,3 @@ async def delete_area(callback: types.CallbackQuery,
     await callback.message.answer("Место нарушения успешно удалёно из базы данных.")
     await callback.message.edit_reply_markup(reply_markup=None)
     log.success("User {user} deleted from database", user=area_id)
-
-

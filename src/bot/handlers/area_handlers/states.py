@@ -1,4 +1,5 @@
 """Состояния для добавления места нарушения."""
+
 from aiogram.fsm.state import State, StatesGroup
 
 

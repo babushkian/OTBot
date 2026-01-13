@@ -21,14 +21,15 @@ from bot.keyboards.inline_keyboards.callback_factories import (
 
 router = Router(name=__name__)
 
-async def check_chat_members(user_repo:UserRepository, users:UserList, message:types.Message) -> UserList:
+
+async def check_chat_members(user_repo: UserRepository, users: UserList, message: types.Message) -> UserList:
     """Обработка случая, когда пользователь удалил бота и не может с ним взаимодействовать.
 
     Возможны два варианта:
     1) пользователь удалил бота до того, как его одобрили - тогда он удаляется.
     2) одобренный пользователь удалил бота - тогда он становится неактивным.
     """
-    chat_members =  UserList([])
+    chat_members = UserList([])
     for line in users:
         try:
             await message.bot.get_chat_member(settings.TG_GROUP_ID, line["telegram_id"])
@@ -36,10 +37,10 @@ async def check_chat_members(user_repo:UserRepository, users:UserList, message:t
         except TelegramBadRequest as e:
             log.error(e)
             if line["is_approved"]:
-                log.info(f"Deactivating user {line["first_name"]}")
+                log.info(f"Deactivating user {line['first_name']}")
                 await user_repo.update_user_by_id(line["id"], {"is_active": False})
             else:
-                log.info(f"Deleting user {line["first_name"]}")
+                log.info(f"Deleting user {line['first_name']}")
                 # опасно сразу удалять пользователя, потому что на него могут ссылаться места и нарушения
                 # поэтому пока просто предупреждаю
                 # await user_repo.delete_user_by_id(user_id=line["id"])
@@ -47,10 +48,9 @@ async def check_chat_members(user_repo:UserRepository, users:UserList, message:t
 
 
 @router.message(Command("approve"))
-async def approve_command(message: types.Message,
-                          session: AsyncSession,
-                          state: FSMContext,
-                          group_user: UserModel) -> None:
+async def approve_command(
+    message: types.Message, session: AsyncSession, state: FSMContext, group_user: UserModel
+) -> None:
     """Одобрение пользователя администратором."""
     if group_user.telegram_id not in settings.SUPER_USERS_TG_ID:
         return
@@ -67,10 +67,13 @@ async def approve_command(message: types.Message,
         await message.reply(no_users_message)
         return
 
-    users_to_approve = tuple([{"id": line["id"], "phone_number": f"{line["first_name"]} {line["phone_number"]}"}
-                              for line in cleaned_users])
+    users_to_approve = tuple(
+        [{"id": line["id"], "phone_number": f"{line['first_name']} {line['phone_number']}"} for line in cleaned_users]
+    )
     users_to_approve_kb = await create_keyboard(
-        items=users_to_approve, text_key="phone_number", callback_factory=ApproveUserFactory,
+        items=users_to_approve,
+        text_key="phone_number",
+        callback_factory=ApproveUserFactory,
     )
     await message.reply("Выберите пользователя для одобрения:", reply_markup=users_to_approve_kb)
     await state.set_state(ApproveUserStates.started)
@@ -92,26 +95,28 @@ async def disapprove_command(message: types.Message, session: AsyncSession, grou
     if not cleaned_users:
         await message.reply(no_users_message)
         return
-    users_to_disapprove = tuple([{"id": user["id"], "phone_number": f"{user["first_name"]} {user["phone_number"]}"}
-                                 for user in cleaned_users])
+    users_to_disapprove = tuple(
+        [{"id": user["id"], "phone_number": f"{user['first_name']} {user['phone_number']}"} for user in cleaned_users]
+    )
     users_to_approve_kb = await create_keyboard(
-        items=users_to_disapprove, text_key="phone_number", callback_factory=DisApproveUserFactory,
+        items=users_to_disapprove,
+        text_key="phone_number",
+        callback_factory=DisApproveUserFactory,
     )
     await message.reply("Выберите пользователя для отмены одобрения:", reply_markup=users_to_approve_kb)
 
 
 @router.message(Command("delapprove"))
-async def delete_command(message: types.Message,
-                         session: AsyncSession,
-                         group_user: UserModel) -> None:
+async def delete_command(message: types.Message, session: AsyncSession, group_user: UserModel) -> None:
     """Одобрение пользователя администратором."""
     if group_user.user_role != UserRole.ADMIN:
         return
 
     user_repo = UserRepository(session)
     users = await user_repo.get_not_approved_users()
-    no_users_message = ("Нет пользователей для удаления. \n"
-                        "Перед удалением пользователя его регистрация должна быть отменена.")
+    no_users_message = (
+        "Нет пользователей для удаления. \nПеред удалением пользователя его регистрация должна быть отменена."
+    )
     if not users:
         await message.reply(no_users_message)
         return
@@ -119,10 +124,13 @@ async def delete_command(message: types.Message,
     if not cleaned_users:
         await message.reply(no_users_message)
         return
-    users_to_delete = tuple([{"id": line["id"], "phone_number": f"{line["first_name"]} {line["phone_number"]}"}
-                             for line in cleaned_users])
+    users_to_delete = tuple(
+        [{"id": line["id"], "phone_number": f"{line['first_name']} {line['phone_number']}"} for line in cleaned_users]
+    )
     users_to_delete_kb = await create_keyboard(
-        items=users_to_delete, text_key="phone_number", callback_factory=DeletedUserFactory,
+        items=users_to_delete,
+        text_key="phone_number",
+        callback_factory=DeletedUserFactory,
     )
 
     await message.reply("Выберите для отмены удаления:", reply_markup=users_to_delete_kb)

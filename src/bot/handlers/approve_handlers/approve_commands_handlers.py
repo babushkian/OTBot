@@ -1,4 +1,5 @@
 """Обработчики для одобрения пользователей."""
+
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,12 +24,9 @@ router = Router(name=__name__)
 
 
 @router.callback_query(ApproveUserFactory.filter(), ApproveUserStates.started)
-async def approve_user(callback: types.CallbackQuery,
-                       callback_data: ApproveUserFactory,
-                       state: FSMContext) -> None:
+async def approve_user(callback: types.CallbackQuery, callback_data: ApproveUserFactory, state: FSMContext) -> None:
     """Обрабатывает кнопку выбранного пользователя для одобрения."""
-    await callback.message.answer("Введите имя пользователя:",
-                                  reply_markup=generate_cancel_button())
+    await callback.message.answer("Введите имя пользователя:", reply_markup=generate_cancel_button())
     await state.update_data(user_id=callback_data.id)
     await state.set_state(ApproveUserStates.name_enter)
     await callback.answer("Выбран пользователь для одобрения.")
@@ -41,11 +39,12 @@ async def approve_user_enter_name(message: types.Message, state: FSMContext) -> 
     try:
         user_name = verify_string_as_filename(str(message.text))
     except StringInputError as e:
-        await message.answer(text=f"Неверно введёно имя пользователя. \n{e.args[0]}.\n"
-                                  f"Начать с начала? /approve",
-                             parse_mode="HTML")
-        log.warning("Wrong input for user name: {text}, by user {message}",
-                    message=message.from_user.id, text=message.text)
+        await message.answer(
+            text=f"Неверно введёно имя пользователя. \n{e.args[0]}.\nНачать с начала? /approve", parse_mode="HTML"
+        )
+        log.warning(
+            "Wrong input for user name: {text}, by user {message}", message=message.from_user.id, text=message.text
+        )
         await state.clear()
         return
     else:
@@ -57,27 +56,26 @@ async def approve_user_enter_name(message: types.Message, state: FSMContext) -> 
 
 
 @router.callback_query(UserRoleFactory.filter(), ApproveUserStates.role_enter)
-async def approve_user_enter_role(callback: types.CallbackQuery,
-                                  callback_data: UserRoleFactory,
-                                  state: FSMContext) -> None:
+async def approve_user_enter_role(
+    callback: types.CallbackQuery, callback_data: UserRoleFactory, state: FSMContext
+) -> None:
     """Обрабатывает выбранную роль пользователя для одобрения."""
     user_role = callback_data.role
     data = await state.update_data(user_role=user_role)
     data_text = f"Пользователь: {data['first_name']}, Роль: {UserRole[data['user_role']]}"
 
-    await callback.message.answer("Ввод данных завершен.\n"
-                                  "Введённые данные:\n"
-                                  f"{data_text}.\n"
-                                  f"Всё верно?", reply_markup=generate_yes_no_keyboard())
+    await callback.message.answer(
+        f"Ввод данных завершен.\nВведённые данные:\n{data_text}.\nВсё верно?", reply_markup=generate_yes_no_keyboard()
+    )
     await callback.answer(f"Роль пользователя: {user_role}")
     log.success("User role {role} saved in data state", role=user_role)
     await state.set_state(ApproveUserStates.completed)
 
 
 @router.message(ApproveUserStates.completed, F.text.in_(["✅ Да", "❌ Нет"]))
-async def handle_yes_no_response(message: types.Message, state: FSMContext,
-                                 session: AsyncSession,
-                                 group_user: UserModel) -> None:
+async def handle_yes_no_response(
+    message: types.Message, state: FSMContext, session: AsyncSession, group_user: UserModel
+) -> None:
     """Обработчик для ответов "Да" или "Нет" при одобрении пользователя."""
     data = await state.get_data()
     if message.text == "✅ Да":
@@ -86,7 +84,7 @@ async def handle_yes_no_response(message: types.Message, state: FSMContext,
         user_repo = UserRepository(session)
         success = await user_repo.update_user_by_id(user_id, data)
         if success:
-            await message.answer(f"Данные пользователя {data["first_name"]} обновлены.")
+            await message.answer(f"Данные пользователя {data['first_name']} обновлены.")
             log.success("User data {user} updated", user=data["first_name"])
         else:
             await message.answer("Возникла ошибка. Попробуйте позже.")
@@ -100,10 +98,11 @@ async def handle_yes_no_response(message: types.Message, state: FSMContext,
 
 
 @router.callback_query(DisApproveUserFactory.filter())
-async def disapprove_user(callback: types.CallbackQuery,
-                          callback_data: ApproveUserFactory,
-                          session: AsyncSession,
-                          ) -> None:
+async def disapprove_user(
+    callback: types.CallbackQuery,
+    callback_data: ApproveUserFactory,
+    session: AsyncSession,
+) -> None:
     """Обрабатывает кнопку выбранного пользователя для отмены регистрации."""
     user_id = callback_data.id
     user_repo = UserRepository(session)
@@ -116,10 +115,11 @@ async def disapprove_user(callback: types.CallbackQuery,
 
 
 @router.callback_query(DeletedUserFactory.filter())
-async def delete_user(callback: types.CallbackQuery,
-                      callback_data: DeletedUserFactory,
-                      session: AsyncSession,
-                      ) -> None:
+async def delete_user(
+    callback: types.CallbackQuery,
+    callback_data: DeletedUserFactory,
+    session: AsyncSession,
+) -> None:
     """Обрабатывает кнопку выбранного пользователя для удаления."""
     user_id = callback_data.id
     user_repo = UserRepository(session)

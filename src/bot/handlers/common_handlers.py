@@ -1,4 +1,5 @@
 """Общие обработчики."""
+
 from aiogram import Router, types
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -23,9 +24,9 @@ async def handle_cancel_message(message: types.Message, state: FSMContext) -> No
 
 
 @router.callback_query(CancelCallbackFactory.filter())
-async def handle_cancel_callback(callback: CallbackQuery,
-                                 callback_data: CancelCallbackFactory,
-                                 state: FSMContext) -> None:
+async def handle_cancel_callback(
+    callback: CallbackQuery, callback_data: CancelCallbackFactory, state: FSMContext
+) -> None:
     """Обработчик для inline кнопки "Отмена"."""
     action = callback_data.action
 
@@ -41,5 +42,3 @@ async def handle_cancel_callback(callback: CallbackQuery,
 
     await callback.answer("Действие отменено. Клавиатура удалена.")
     log.info("User {user} canceled action", user=callback.message.from_user.id)
-
-

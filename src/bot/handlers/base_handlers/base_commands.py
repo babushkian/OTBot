@@ -31,22 +31,21 @@ async def command_start(message: types.Message, user: UserModel | None) -> None:
 
 
 @router.message(Command("instruction"))
-async def command_instruction(message: types.Message,
-                              group_user: UserModel,
-                              access_denied: bool) -> None:
+async def command_instruction(message: types.Message, group_user: UserModel, access_denied: bool) -> None:
     """Получение инструкции по использованию."""
     if access_denied:
-        msg = (f"У вас нет доступа к этой команде. Проверьте свою регистрацию командой /start. "
-               f"Убедитесь, что состоите в группе {settings.TG_GROUP_ID}, иначе обратитесь к администратору бота.")
+        msg = (
+            f"У вас нет доступа к этой команде. Проверьте свою регистрацию командой /start. "
+            f"Убедитесь, что состоите в группе {settings.TG_GROUP_ID}, иначе обратитесь к администратору бота."
+        )
         await message.answer(msg)
-        log.warning("Пользователь без доступа с tg_id {user_id} запросил инструкцию.",
-                    user_id=message.from_user.id)
+        log.warning("Пользователь без доступа с tg_id {user_id} запросил инструкцию.", user_id=message.from_user.id)
         return
     instruction_file = settings.docs_dir / "docs OTBot.pdf"
     caption = "Инструкция OTBot"
-    await message.bot.send_document(chat_id=message.from_user.id,
-                                    document=FSInputFile(instruction_file),
-                                    caption=caption)
+    await message.bot.send_document(
+        chat_id=message.from_user.id, document=FSInputFile(instruction_file), caption=caption
+    )
     log.debug("Пользователь {group_user} получил инструкцию по использованию.", group_user=group_user.first_name)
 
 

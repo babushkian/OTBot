@@ -1,4 +1,5 @@
 """Утилиты отчётов."""
+
 import re
 import json
 
@@ -18,6 +19,7 @@ def remove_default_sheet(wb: Workbook) -> Workbook | None:
         wb.remove(default_sheet)
 
     return wb
+
 
 def validate_date_interval(date_interval: str) -> bool | tuple[datetime, datetime]:
     """Валидатор для строки с интервалом дат в формате "DD-MM-YYYY DD-MM-YYYY"."""

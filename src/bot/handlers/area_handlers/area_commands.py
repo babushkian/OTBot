@@ -1,4 +1,5 @@
 """Команды редактирования масте нарушения."""
+
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -17,10 +18,9 @@ router = Router(name=__name__)
 
 
 @router.message(Command("area"))
-async def area_updating(message: types.Message,
-                        group_user: UserModel,
-                        session: AsyncSession,
-                        state: FSMContext) -> None:
+async def area_updating(
+    message: types.Message, group_user: UserModel, session: AsyncSession, state: FSMContext
+) -> None:
     """Запуск добавление/редактирование места нарушения."""
     if message.from_user.id not in settings.SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
         return
@@ -31,8 +31,9 @@ async def area_updating(message: types.Message,
     areas_to_kb = [{"area_name": area.name, "id": area.id} for area in areas] if areas else []
     areas_to_kb.append({"area_name": "Добавить новое место", "id": 0})
 
-    areas_keyboard = await create_keyboard(items=tuple(areas_to_kb), text_key="area_name",
-                                           callback_factory=AreaSelectFactory)
+    areas_keyboard = await create_keyboard(
+        items=tuple(areas_to_kb), text_key="area_name", callback_factory=AreaSelectFactory
+    )
 
     await message.reply("Выберите место нарушения для редактирования:", reply_markup=areas_keyboard)
     await state.set_state(AreaAddOrUpdateStates.start)
@@ -40,9 +41,7 @@ async def area_updating(message: types.Message,
 
 
 @router.message(Command("delarea"))
-async def delete_command(message: types.Message,
-                         session: AsyncSession,
-                         group_user: UserModel) -> None:
+async def delete_command(message: types.Message, session: AsyncSession, group_user: UserModel) -> None:
     """Удаление места нарушения администратором."""
     if message.from_user.id not in settings.SUPER_USERS_TG_ID or group_user.user_role != UserRole.ADMIN:
         return
@@ -52,7 +51,8 @@ async def delete_command(message: types.Message,
 
     areas_to_kb = [{"area_name": area.name, "id": area.id} for area in areas] if areas else []
 
-    areas_keyboard = await create_keyboard(items=tuple(areas_to_kb), text_key="area_name",
-                                           callback_factory=AreaDeleteFactory)
+    areas_keyboard = await create_keyboard(
+        items=tuple(areas_to_kb), text_key="area_name", callback_factory=AreaDeleteFactory
+    )
 
     await message.reply("Выберите место нарушения для удаления:", reply_markup=areas_keyboard)

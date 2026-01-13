@@ -18,9 +18,9 @@ router = Router(name=__name__)
 
 
 @router.message(Command("detect"))
-async def detect_violation(message: types.Message, access_denied: bool,
-                           group_user: UserModel | None,
-                           state: FSMContext) -> None:
+async def detect_violation(
+    message: types.Message, access_denied: bool, group_user: UserModel | None, state: FSMContext
+) -> None:
     """Запуск процесса обнаружения нарушений."""
     if access_denied and group_user.user_role != UserRole.OTPB:
         return
@@ -31,11 +31,9 @@ async def detect_violation(message: types.Message, access_denied: bool,
 
 
 @router.message(Command("check"))
-async def check_violation(message: types.Message,
-                          access_denied: bool,
-                          group_user: UserModel,
-                          session: AsyncSession,
-                          state: FSMContext) -> None:
+async def check_violation(
+    message: types.Message, access_denied: bool, group_user: UserModel, session: AsyncSession, state: FSMContext
+) -> None:
     """Проверка (обновление/удаление) нарушения."""
     if access_denied and group_user.user_role != UserRole.ADMIN:
         return
@@ -49,16 +47,12 @@ async def check_violation(message: types.Message,
 
     violations_to_kb: list = []
     for violation in violations:
-        btn_info = {
-            "id": violation.id,
-            "btn_name": f"Нарушение №{violation.number}-{violation.area.name}"
-        }
+        btn_info = {"id": violation.id, "btn_name": f"Нарушение №{violation.number}-{violation.area.name}"}
         violations_to_kb.append(btn_info)
 
-
-    violations_kb = await create_keyboard(items=violations_to_kb, text_key="btn_name",
-                                          callback_factory=ViolationsFactory)
+    violations_kb = await create_keyboard(
+        items=violations_to_kb, text_key="btn_name", callback_factory=ViolationsFactory
+    )
     print(violations_kb)
     await message.answer("Выберите нарушение для проверки:", reply_markup=violations_kb)
     await state.set_state(ViolationStates.start)
-

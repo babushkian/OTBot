@@ -5,6 +5,7 @@ from bot.handlers.detection_handlers.detection_commands_handlers import router a
 
 router = Router(name=__name__)
 
-router.include_routers(detection_commands_router,
-                       detection_handler_router,
-                       )
+router.include_routers(
+    detection_commands_router,
+    detection_handler_router,
+)

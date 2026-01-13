@@ -1,4 +1,5 @@
 """Утилиты для handlers."""
+
 from typing import Any
 
 from aiogram import types
@@ -15,10 +16,13 @@ async def get_telegram_data(message: types.Message) -> dict[str, Any]:
         log.debug("Error to convert telegram_data to json.")
         log.exception(e)
 
-    return {"message_id": message.from_user.id,
-            "date": message.date.strftime("%Y.%m.%d"),
-            "user": {"username": message.from_user.username,
-                     "first_name": message.from_user.first_name,
-                     "full_name": message.from_user.full_name},
-            "raw_telegram_data": raw_telegram_data,
-            }
+    return {
+        "message_id": message.from_user.id,
+        "date": message.date.strftime("%Y.%m.%d"),
+        "user": {
+            "username": message.from_user.username,
+            "first_name": message.from_user.first_name,
+            "full_name": message.from_user.full_name,
+        },
+        "raw_telegram_data": raw_telegram_data,
+    }
