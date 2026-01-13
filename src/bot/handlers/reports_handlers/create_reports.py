@@ -69,7 +69,7 @@ def create_static_report(violations: tuple) -> bytes:
     full_report_ws = wb["Полный отчёт"]
     # шапка
     full_report_ws.append([
-        "Номер нарушения",  # ["id"]
+        "Номер нарушения",  # ["number"]
         "Место нарушения",  # ["area"]["name"]
         "Описание нарушения",  # ["description]
         "Ответственный",  # ["area"]["responsible_user"] if responsible_user_id else ["area"]["responsible_text"]
@@ -83,7 +83,7 @@ def create_static_report(violations: tuple) -> bytes:
     # данные полного отчёта
     for violation in violations:
         full_report_ws.append([
-            violation.id,
+            violation.number,
             violation.area.name,
             violation.description,
             violation.area.responsible_user.first_name if violation.area.responsible_user_id else (

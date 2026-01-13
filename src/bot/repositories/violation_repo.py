@@ -47,6 +47,42 @@ class ViolationRepository:
             return violation
 
 
+    async def get_violation_by_number(self, violation_number: int) -> ViolationModel | None:
+        """Получение нарушения по номеру.
+            Так как номера уникальны только в пределах одного года, то выбираются все нарушения с указанным номером
+            и возвращается последняя по дате запись.
+        """
+        try:
+            result = await self.session.execute(
+                select(ViolationModel)
+                .where(ViolationModel.number == violation_number)
+                .order_by(ViolationModel.created_at.desc()) # сортируется по дате по убыванию, чтобы взять последний
+                .options(
+                    joinedload(ViolationModel.area)
+                    .options(joinedload(AreaModel.responsible_user)),
+                    joinedload(ViolationModel.detector),
+                    selectinload(ViolationModel.files)
+                )
+            )
+        except SQLAlchemyError as e:
+            log.error("SQLAlchemyError getting violation with number {violation_number}", violation_number=violation_number)
+            log.exception(e)
+            return None
+        except Exception as e:
+            log.error("Error getting violation with number {violation_number}", violation_number=violation_number)
+            log.exception(e)
+            return None
+        else:
+            log.success("Violation with number {violation_number} found successfully", violation_number=violation_number)
+            violation = result.scalars().first()
+            log.info(violation)
+            log.info(violation.id)
+            log.info(violation.number)
+            if not violation:
+                return None
+            return violation
+
+
     async def get_all_violations(self) -> Sequence[ViolationModel] | None:
         """Получение всех мест нарушения."""
         try:
@@ -69,7 +105,9 @@ class ViolationRepository:
             log.success("{col} violations found successfully", col=len(violations))
             return violations
 
+
     async def get_max_number(self):
+        """Возвращает последний номер нарушения в этом году."""
         current_year = datetime.now().year
         stmt = (select(func.max(ViolationModel.number))
                     .where(
@@ -128,6 +166,7 @@ class ViolationRepository:
             log.success("Violation data with id {violation} updated successfully: {update_data}",
                         violation=violation_id, update_data=update_data)
             return True
+
 
     async def delete_violation_by_id(self, violation_id: int) -> None:
         """Удаление данных нарушения по violation_id."""
@@ -223,6 +262,7 @@ class ViolationRepository:
             log.success("{col} violations found successfully", col=len(violations))
 
             return violations
+
 
     async def get_all_active_violations_by_date(self,
                                                 start_date: datetime,
