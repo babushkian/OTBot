@@ -1,5 +1,5 @@
-from .violation_commands import router as close_router
-from .violation_commands_handlers import router as close_handlers_router
+from .commands import router as close_router
+from .command_handlers import router as close_handlers_router
 from aiogram import Router
 
 router = Router(name = __name__)

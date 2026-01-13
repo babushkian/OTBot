@@ -65,6 +65,7 @@ async def handle_violation_close_activation(callback: types.CallbackQuery, state
         "Вы уверены, что хотите ЗАКРЫТЬ данное нарушение?", reply_markup=generate_yes_no_keyboard()
     )
     await state.set_state(ViolationCloseStates.close)
+    await callback.answer()
 
 
 @router.message(ViolationCloseStates.close, F.text.in_(["✅ Да", "❌ Нет"]))
