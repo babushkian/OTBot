@@ -32,6 +32,7 @@ async def handle_report_type_select(
 ) -> None:
     """Обработка выбора типа отчёта."""
     violation_repo = ViolationRepository(session)
+    log.debug("['хэндлер обработки выбранного вида отчета")
     match callback_data.type:
         case "by_id":
             await callback.message.answer("Введите номер нарушения:", reply_markup=generate_cancel_button())
@@ -201,6 +202,8 @@ async def handle_report_sum(
 async def handle_report_range(
     message: types.Message, group_user: UserModel, session: AsyncSession, state: FSMContext
 ) -> None:
+    log.debug("хэндлер обработки диапазона дат")
+    log.debug("значение ввода {mt}", mt=message.text )
     """Обработчик ввода интервала дат."""
     dates = validate_date_interval(message.text)
     error_message = (

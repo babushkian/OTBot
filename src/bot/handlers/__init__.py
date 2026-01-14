@@ -18,8 +18,10 @@ router.include_routers(
     common_handlers_router,
     approve_handlers_router,
     area_handlers_router,
-    reports_handlers_router,
     violation_handlers_router,
+    reports_handlers_router,
+
+
 )
 
 router.message.middleware(DbSessionMiddleware(session_pool=async_session_factory))

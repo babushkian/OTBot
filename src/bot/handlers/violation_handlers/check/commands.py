@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.logger_config import log
 from bot.enums import UserRole
 from bot.repositories.user_repo import UserModel
 from bot.repositories.violation_repo import ViolationRepository
@@ -19,6 +20,8 @@ router = Router(name=__name__)
 async def check_violation(
     message: types.Message, access_denied: bool, group_user: UserModel, session: AsyncSession, state: FSMContext
 ) -> None:
+    log.debug("хэндлер  check")
+    log.debug(message.text)
     """Проверка (обновление/удаление) нарушения."""
     if access_denied and group_user.user_role != UserRole.ADMIN:
         return
