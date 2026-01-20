@@ -310,7 +310,8 @@ async def handle_detection_yes_no_response(
         success = await violation_service.add(data)
         if success:
             await message.answer(f"Данные нарушения №{success.number} сохранены.")
-            log.success("Violation data {violation} added", violation=data["description"])
+            log.info("Создано нарушение № {number}({id}) area_id: {description}", number=success.number, id=success.id,
+                     description=success.description)
             # оповещаем админов
             user_repo = UserRepository(session)
             # этот подход не универсальный, он ссылается на базу,  ан не на .env

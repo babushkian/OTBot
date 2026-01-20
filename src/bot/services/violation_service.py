@@ -6,7 +6,7 @@ from bot.db.models import FileModel, ViolationModel
 from bot.repositories.violation_repo import ViolationRepository
 from bot.repositories.image_repo import ImageRepository
 from bot.utils.image_utils import handle_image
-
+from bot.logger_config import log
 
 class ViolationService:
     def __init__(self, session: AsyncSession):
@@ -16,6 +16,7 @@ class ViolationService:
 
 
     async def add(self, data):
+        log.info("Добавляем новое нарушение.")
         number = await self.violations.get_max_number()
         actions = [f"{line["action"]}. Срок устранения: {line["fix_time"]}" for line in action_needed_deadline()]
         violation = ViolationModel(

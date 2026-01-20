@@ -21,4 +21,5 @@ bot/keyboards/category_buttons.json
 /data/images
 /data/logs
 /data/json/category_buttons.json
+/data/typst/*.pdf
 

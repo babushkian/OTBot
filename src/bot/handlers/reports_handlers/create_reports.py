@@ -8,9 +8,10 @@ from pathlib import Path
 from collections import defaultdict
 
 from openpyxl import Workbook
+from typing import Sequence
 
 from bot.enums import ViolationStatus
-from bot.db.models import UserModel
+from bot.db.models import UserModel, ViolationModel
 from bot.logger_config import log
 from bot.handlers.reports_handlers.reports_utils import remove_default_sheet
 from bot.handlers.reports_handlers.generate_typst import generate_typst
@@ -24,11 +25,28 @@ def write_typst_file(created_by: UserModel, violations: tuple, typ_file: Path) -
         tf.write(typst_document)
 
 
-def create_typst_report(created_by: UserModel, violations: tuple) -> Path:
+def create_typst_report(created_by: UserModel, violations: Sequence[ViolationModel]) -> Path:
     """Создание отчёта pdf с помощью typst."""
+    first, last= violations[0], violations[-1]
+    if first == last:
+        file_number = str(first.number)
+        log.info("создается предписание № {f.number}({f.id})", f=first)
+    else:
+        file_number = f"{first.number}_{last.number}"
+        log.info("создаются предписания №№ {f.number}({f.id}) - {l.number}({l.id})", f=first, l=last)
+
+
+
     typ_file = settings.report_typ_file
     write_typst_file(created_by, violations, typ_file)
     pdf_file = settings.report_pdf_file
+    pdf_file = settings.typst_dir / f"предписаие_{file_number}.pdf"
+    if pdf_file.exists():
+        try:
+            pdf_file.unlink()
+        except OSError as e:
+            log.error("Ошибка удаления файла {f} перед созданием нового", f=pdf_file)
+            log.exception(e)
     if platform.system() == "Windows":
         typst_command = settings.typst_dir / "typst.exe"
         cmd = [typst_command, "compile", "--root", settings.BASE_DIR, typ_file, pdf_file]
@@ -50,7 +68,7 @@ def create_typst_report(created_by: UserModel, violations: tuple) -> Path:
         log.error(e.stderr)
         msg = "Не удалось скомпилировать Typst файл"
         raise RuntimeError(msg)
-
+    typ_file.unlink(missing_ok=True)
     log.success(f"PDF успешно создан: {pdf_file}")
     return pdf_file
 

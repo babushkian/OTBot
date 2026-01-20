@@ -41,9 +41,6 @@ class ViolationRepository:
         else:
             log.success("Violation with id {violation_id} found successfully", violation_id=violation_id)
             violation = result.unique().scalar_one_or_none()
-
-            if not violation:
-                return None
             return violation
 
 
@@ -116,7 +113,8 @@ class ViolationRepository:
                 )
         try:
             result  = (await self.session.execute(stmt)).scalar()
-            log.success("результат запроса номера {number}", number= result)
+            log.success("результат запроса номера последнего нарущения {number}", number= result)
+
         except Exception as e:
             log.error("Ошибка при получении номера последнего поручения.")
             log.exception(e)
