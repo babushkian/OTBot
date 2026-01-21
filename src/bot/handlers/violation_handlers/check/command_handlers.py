@@ -100,7 +100,8 @@ async def handle_detection_activation_yes_no_response(
 
             caption_jpeg = f"Выявлено нарушение №{data['number']} в месте '{data['area']}'."
             caption_pdf = f"Детали нарушения №{data['number']}"
-            log.info("файл, отправляемый в группу: {v.id}({v.number}) место: {v.area.name} описание: {v.description} ", v=violation_data)
+            log.info("файл, отправляемый в группу: {v.id}({v.number}) место: {v.area.name} описание: {v.description} ",
+                     v=violation_data)
             pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
             document = FSInputFile(pdf_file)
 

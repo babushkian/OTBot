@@ -39,8 +39,8 @@ def create_typst_report(created_by: UserModel, violations: Sequence[ViolationMod
 
     typ_file = settings.report_typ_file
     write_typst_file(created_by, violations, typ_file)
-    pdf_file = settings.report_pdf_file
-    pdf_file = settings.typst_dir / f"предписаие_{file_number}.pdf"
+    # pdf_file = settings.report_pdf_file
+    pdf_file = settings.typst_dir / f"предписание_{file_number}.pdf"
     if pdf_file.exists():
         try:
             pdf_file.unlink()
