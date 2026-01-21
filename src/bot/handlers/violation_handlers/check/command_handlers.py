@@ -81,6 +81,8 @@ async def handle_detection_activation_yes_no_response(
 ) -> None:
     """Обработчик для ответов "Да" или "Нет" при рассмотрении нарушения для одобрения."""
     data = await state.get_data()
+    log.info("Последний этап допуска нарушения начальником.")
+    log.info("Данные, содержащиеся в состоянии (про проверке): {d}", d=data)
     if message.text == "✅ Да":
         violation_repo = ViolationRepository(session)
         new_status = {"id": data["id"], "status": ViolationStatus.ACTIVE}
