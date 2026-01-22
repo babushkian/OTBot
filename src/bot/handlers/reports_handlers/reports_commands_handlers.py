@@ -72,6 +72,7 @@ async def handle_report_type_select(
             log.info("создали файл отчета")
             document = FSInputFile(result_report)
             log.info("отправили файл в телеграм")
+            log.info("надо отправить пользователю {user}", user=callback.from_user.id )
             await callback.message.bot.send_document(
                 chat_id=callback.from_user.id,
                 document=document,
