@@ -3,7 +3,7 @@ import asyncio
 import contextlib
 
 from asyncio.exceptions import CancelledError
-
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram import Bot, Dispatcher
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.client.default import DefaultBotProperties
@@ -34,9 +34,17 @@ async def on_shutdown(bot: Bot) -> None:
 
 async def main() -> None:
     """Точка входа."""
-    bot = Bot(token=settings.BOT_TOKEN,
-              default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-              )
+
+
+    session = AiohttpSession(
+        timeout=60  # секунды
+    )
+
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=session
+    )
     try:
         dp = Dispatcher()
         dp.include_router(main_router)
