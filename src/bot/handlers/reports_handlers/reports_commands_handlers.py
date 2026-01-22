@@ -31,6 +31,7 @@ async def handle_report_type_select(
 ) -> None:
     """Обработка выбора типа отчёта."""
     violation_repo = ViolationRepository(session)
+    await callback.answer()
     log.debug("['хэндлер обработки выбранного вида отчета")
     match callback_data.type:
         case "by_id":
@@ -57,14 +58,16 @@ async def handle_report_type_select(
             violations = await violation_repo.get_active_violations()
             result_report = create_typst_report(violations=violations, created_by=group_user)
             document = FSInputFile(result_report)
+            log.info(f"Отчет {document.filename} сформирован.", document)
             await callback.message.bot.send_document(chat_id=callback.from_user.id, document=document, caption="Отчёт.")
+            log.info(f"Отчет {document.filename} отправлен.", document)
             await callback.message.answer("Отчёт сгенерирован.")
             await state.clear()
 
             log.debug("User {user} selected report type 'active'.", user=group_user.first_name)
 
         case "review":
-            await callback.answer()
+
             log.info("Вошли в  ветку формирования отчета")
             violations = await violation_repo.get_not_reviewed_violations()
             log.info("получили список предписаний")
@@ -242,6 +245,13 @@ async def handle_report_range(
         return
     result_report = create_typst_report(violations=violations, created_by=group_user)
     document = FSInputFile(result_report)
-    await message.bot.send_document(chat_id=message.from_user.id, document=document, caption="Отчёт.")
+    log.info(f"Отчет {document.filename} сформирован.", document)
+    await message.chat.do("upload_document")
+    await message.bot.send_document(
+        chat_id=message.from_user.id,
+        document=document,
+        caption="Отчёт."
+    )
+    log.info(f"Отчет {document.filename} отправлен.", document)
     await message.answer("Отчёт сгенерирован.")
     await state.clear()

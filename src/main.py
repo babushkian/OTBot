@@ -37,7 +37,7 @@ async def main() -> None:
 
 
     session = AiohttpSession(
-        timeout=60  # секунды
+        timeout=120  # секунды
     )
 
     bot = Bot(
