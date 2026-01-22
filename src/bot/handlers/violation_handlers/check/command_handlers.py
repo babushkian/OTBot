@@ -110,10 +110,16 @@ async def handle_detection_activation_yes_no_response(
             try:
                 await message.bot.send_document(
                     chat_id=settings.TG_GROUP_ID,
-                    document=BufferedInputFile(jpeg_file, filename=f"Нарушение №{data['number']}.jpg"),
+                    document=BufferedInputFile(
+                        jpeg_file,
+                        filename=f"Нарушение №{data['number']}.jpg"
+                    ),
                     caption=caption_jpeg,
                 )
-                await message.bot.send_document(chat_id=settings.TG_GROUP_ID, document=document, caption=caption_pdf)
+                await message.bot.send_document(
+                    chat_id=settings.TG_GROUP_ID,
+                    document=document,
+                    caption=caption_pdf)
                 log.debug(
                     "Violation report {report}({number}) sent to group.", report=data["id"], number=data["number"]
                 )

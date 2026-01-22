@@ -65,11 +65,21 @@ async def handle_report_type_select(
             log.debug("User {user} selected report type 'active'.", user=group_user.first_name)
 
         case "review":
+            log.info("Вошли в  ветку формирования отчета")
             violations = await violation_repo.get_not_reviewed_violations()
+            log.info("получили список предписаний")
             result_report = create_typst_report(violations=violations, created_by=group_user)
+            log.info("создали файл отчета")
             document = FSInputFile(result_report)
-            await callback.message.bot.send_document(chat_id=callback.from_user.id, document=document, caption="Отчёт.")
+            log.info("отправили файл в телеграм")
+            await callback.message.bot.send_document(
+                chat_id=callback.from_user.id,
+                document=document,
+                caption="Отчёт."
+            )
+            log.info("отправлил документ пользователю")
             await callback.message.answer("Отчёт сгенерирован.")
+            log.info("послали уведомление о доставке отчета")
             await state.clear()
 
             log.debug("User {user} selected report type 'review'.", user=group_user.first_name)
