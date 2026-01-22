@@ -1,7 +1,6 @@
 """Обработчики команд для отчётов."""
 
 from datetime import datetime, timedelta
-
 from aiogram import Router, types
 from aiogram.types import FSInputFile, BufferedInputFile
 from aiogram.fsm.context import FSMContext
@@ -65,6 +64,7 @@ async def handle_report_type_select(
             log.debug("User {user} selected report type 'active'.", user=group_user.first_name)
 
         case "review":
+            await callback.answer()
             log.info("Вошли в  ветку формирования отчета")
             violations = await violation_repo.get_not_reviewed_violations()
             log.info("получили список предписаний")
@@ -73,11 +73,17 @@ async def handle_report_type_select(
             document = FSInputFile(result_report)
             log.info("отправили файл в телеграм")
             log.info("надо отправить пользователю {user}", user=callback.from_user.id )
-            await callback.message.bot.send_document(
-                chat_id=callback.from_user.id,
-                document=document,
-                caption="Отчёт."
-            )
+            try:
+                # raise ValueError
+                await callback.message.bot.send_document(
+                    chat_id=callback.from_user.id,
+                    document=document,
+                    caption="Отчёт."
+                )
+            except Exception as e:
+                log.error("Ошибка отправки файла пользователю {user}", user=callback.from_user.id)
+                # log.exception(e)
+                raise
             log.info("отправлил документ пользователю")
             await callback.message.answer("Отчёт сгенерирован.")
             log.info("послали уведомление о доставке отчета")
