@@ -27,15 +27,19 @@ def write_typst_file(created_by: UserModel, violations: tuple, typ_file: Path) -
 
 def create_typst_report(created_by: UserModel, violations: Sequence[ViolationModel]) -> Path:
     """Создание отчёта pdf с помощью typst."""
-    first, last= violations[0], violations[-1]
-    if first == last:
-        file_number = str(first.number)
-        log.info("создается предписание № {f.number}({f.id})", f=first)
+
+    if violations:
+        first, last= violations[0], violations[-1]
+        if first == last:
+            file_number = str(first.number)
+            log.info("создается предписание № {f.number}({f.id})", f=first)
+        else:
+            file_number = f"{first.number}_{last.number}"
+            log.info("создаются предписания №№ {f.number}({f.id}) - {l.number}({l.id})", f=first, l=last)
+
     else:
-        file_number = f"{first.number}_{last.number}"
-        log.info("создаются предписания №№ {f.number}({f.id}) - {l.number}({l.id})", f=first, l=last)
-
-
+        file_number ="отсутствует"
+        log.info("создается предписание по пустой выборке")
 
     typ_file = settings.report_typ_file
     write_typst_file(created_by, violations, typ_file)
