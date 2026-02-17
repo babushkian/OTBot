@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, computed_field
+from pydantic import field_validator, computed_field, BaseModel
 
 PROJECT_ROOT =  Path(__file__).resolve().parents[2]
 
@@ -30,6 +30,13 @@ def find_env_file() -> Path | None:
         return p
 
     return None
+
+class MailSchema(BaseModel):
+    email: str
+    password: str
+    hostname: str
+    port: int
+
 
 class Settings(BaseSettings):
     """Настройки, переменные окружения приложения."""
