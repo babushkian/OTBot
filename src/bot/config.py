@@ -35,7 +35,6 @@ class MailSchema(BaseModel):
     email: str
     password: str
     hostname: str
-    port: int
 
 
 class Settings(BaseSettings):
@@ -46,6 +45,22 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     SUPER_USERS_TG_ID: Tuple[int, ...]
     TG_GROUP_ID: int
+    MAIL_LOGIN: str
+    MAIL_PASSWORD: str
+    MAIL_HOST: str
+    MAILING_LIST: list[str]
+
+
+    @computed_field
+    @property
+    def mail_credentials(self) -> MailSchema:
+        """Возвращает структурированные почтовые данные"""
+        return MailSchema(
+            email=self.MAIL_LOGIN,
+            password=self.MAIL_PASSWORD,
+            hostname=self.MAIL_HOST
+        )
+
 
 
     @computed_field
