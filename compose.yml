@@ -1,10 +1,25 @@
 services:
   otbot:
     build: .
-    image: otbot
+    image: otbot-test
     container_name: otbot-ins
     env_file:
       - ./.env
     volumes:
-      - ./data:/app/data
+      - botdata:/app/data
     command: "uv run ./src/main.py"
+    restart: always
+
+  scheduler:
+    build: .
+    image: otbot-test
+    container_name: otbot-sched
+    env_file:
+      - ./.env
+    volumes:
+      - botdata:/app/data
+    command: "uv run ./src/main.py"
+    restart: always
+
+  volumes:
+    botdata:

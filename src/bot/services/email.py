@@ -35,20 +35,32 @@ async def send_email(to_email: str, subject :str, attachment: Path| None =None):
             username=cred.email,
             password=cred.password,
         )
-        log.success("отправлено письмо """)
-    except aiosmtplib.SMTPException as e:
-        log.error("Ошибка при отправке письма.")
+        log.success("отправлено письмо {f} на адрес {e}", f=filename, e=to_email)
+    # except aiosmtplib.SMTPException as e:
+    except Exception as e:
+        log.error("Ошибка при отправке письма {f} на адрес {e}.", f=filename, e=to_email)
         log.exception(e)
+        raise
 
-async def send_email_parallel(recipients: list[str], subject: str, attachment: Path):
-    tasks = [send_email(recipient, subject, attachment) for recipient in recipients]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+async def send_email_parallel(recipients: list[str], subject: str, attachment: Path, max_attempts: int = 4):
+    recs = recipients.copy()
 
-    # Обработка результатов
-    for result in results:
-        if isinstance(result, tuple):
-            recipient, success, message = result
-            status = "✅" if success else "❌"
-            print(f"{status} {recipient}: {message}")
-        else:
-            print(f"❌ Ошибка: {result}")
+    attempt = 0
+    timeout = 1
+    while True:
+        log.info("Попытка отправки на адреса {addr} № {attempt}", attempt = attempt, addr = recs)
+        tasks = [send_email(recipient, subject, attachment) for recipient in recs]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        log.info("результаты попытки № {attempt}: {r}", attempt=attempt, r=results)
+        attempt += 1
+        timeout *= 2
+        new_recs = []
+        for res, recipient in zip(results, recs):
+            if isinstance(res, Exception):
+                log.info("Замечена ошибка при отправке письма")
+                new_recs.append(recipient)
+        recs = new_recs
+        if not recs or attempt >= max_attempts:
+            break
+        await asyncio.sleep(20 * timeout)
+    log.info("Отправка {subj} завершена, оставшиеся ошибки {recs}", subj = subject, recs=recs )
