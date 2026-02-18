@@ -1,8 +1,7 @@
 services:
-  otbot:
-    build: .
+  bot:
     image: otbot-test
-    container_name: otbot-ins
+    container_name: bot-ins
     env_file:
       - ./.env
     volumes:
@@ -11,9 +10,8 @@ services:
     restart: always
 
   scheduler:
-    build: .
     image: otbot-test
-    container_name: otbot-sched
+    container_name: bot-sched
     env_file:
       - ./.env
     volumes:
