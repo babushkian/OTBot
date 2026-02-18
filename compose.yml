@@ -1,6 +1,6 @@
 services:
   bot:
-    image: otbot-test
+    image: otbot
     container_name: bot-ins
     env_file:
       - ./.env
@@ -10,13 +10,13 @@ services:
     restart: always
 
   scheduler:
-    image: otbot-test
+    image: otbot
     container_name: bot-sched
     env_file:
       - ./.env
     volumes:
       - botdata:/app/data
-    command: "uv run ./src/main.py"
+    command: "uv run ./src/scheduler.py"
     restart: always
 
   volumes:

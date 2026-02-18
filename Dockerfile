@@ -35,6 +35,7 @@ RUN uv export --no-dev > requirements.txt && \
 
 COPY alembic.ini ./
 COPY src ./src
+COPY data ./data
 
 # CMD ["python3", "./src/main.py"]
 
