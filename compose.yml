@@ -19,5 +19,5 @@ services:
     command: "uv run ./src/scheduler.py"
     restart: always
 
-  volumes:
-    botdata:
+volumes:
+  botdata:
