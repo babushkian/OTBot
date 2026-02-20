@@ -4,10 +4,13 @@ import hashlib
 from io import BytesIO
 from pathlib import Path
 from dataclasses import dataclass
+from typing import Iterable
 
-from PIL import Image
+from PIL import Image, ImageOps
 from bot.config import settings
 from bot.logger_config import log
+from bot.db.models import FileModel, ViolationModel
+from bot.config import settings
 
 @dataclass()
 class ImageInfo:
@@ -67,3 +70,32 @@ def get_file(path: Path) -> bytes:
         log.error("Не обнаружен файл изображения по адресу %s" % str(path))
         log.exception(e)
         raise e
+
+MAX_SIDE = 640
+def process_image(path: Path)-> Image.Image:
+    with Image.open(path) as im:
+        if im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+        # работаем с копией, чтобы не зависеть от закрытого файла
+        out = im.copy()
+        out.thumbnail((MAX_SIDE, MAX_SIDE), Image.Resampling.LANCZOS)
+        return out
+
+
+def create_temp_images(path: Path, violations: Iterable[ViolationModel]) -> dict[str, str]:
+    processed_images: dict[str, str] = {}
+    for violation in violations:
+        for img in violation.files:
+            processed_img = process_image(settings.DATA_DIR / img.path)
+            abs_img_path = path / Path(img.path).name
+            processed_img.save(
+                abs_img_path,
+                "JPEG",
+                quality = 45,
+                optimize = True,
+                progressive = True,
+                subsampling = "4:2:0",
+            )
+            rel_path = abs_img_path.relative_to(settings.typst_dir).as_posix()
+            processed_images[img.path] = rel_path
+    return processed_images

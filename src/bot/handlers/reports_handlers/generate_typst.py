@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 import json
-
 from pathlib import Path
 from datetime import datetime, timezone
 from jinja2 import Environment, FileSystemLoader
-
+from typing import Callable
 from bot.db.models import FileModel
 from bot.config import settings
 from bot.constants import tz, FIT_IMAGES_ASPECT_RATIO
 from bot.db.models import UserModel
+
 
 
 @dataclass
@@ -31,63 +31,78 @@ def _get_sign_path(user: UserModel) -> Path | None:
         return Path("..") / rel_sign_path
     return None
 
+type ImgResolver = Callable[[FileModel], Path]
 
-def _get_image_path(image: FileModel) -> Path:
-    """Возвращает путь фоторгафии из базы, доступняй для использования в typst-шаблоне."""
-    return Path("..") / image.path
+def _image_resolver_factory(img_map: dict[str, Path]) -> ImgResolver:
 
+    def _get_image_path(image: FileModel) -> str:
+        """Возвращает путь фотографии из базы, доступной для использования в typst-шаблоне."""
+        path = img_map[image.path]
+        return path
 
-def _image_string(image: FileModel) -> str:
+    return _get_image_path
+
+def _image_string(image: FileModel, img_resolver: ImgResolver) -> str:
     """Возвращает фрагмент форматирования typst, представляющий собой картинку."""
-    image_path_relative = _get_image_path(image)
+    image_path_relative = img_resolver(image)
     return f'box(inset:0pt, stroke:white)[#image("{image_path_relative}")]'
 
 
-def _image_grid(images: list[FileModel]) -> str:
+def _image_grid(images: list[FileModel], img_resolver: ImgResolver) -> str:
     """ "Функция создает фрагмент форматирования, где две фотографии расположены в ряд."""
     output = []
     data_list = []
     template = "grid(columns: ({0}fr, {1}fr), gutter: 2pt,{2})\n"
     for image in images:
-        output.append(_image_string(image))
+        output.append(_image_string(image, img_resolver))
         data_list.append(int(image.aspect_ratio * 100))
     data_list.append(",\n".join(output))
     return template.format(*data_list)
 
 
-def _image_row_expression(images: list[FileModel]) -> str:
+def _image_row_expression(images: list[FileModel], img_resolver: ImgResolver) -> str:
     """Выбирает какой фрагмент форматирования вернуть: одну или две фотографии в ряд."""
     if len(images) == 1:
-        return _image_string(images[0])
+        return _image_string(images[0], img_resolver)
     elif len(images) > 1:
-        return _image_grid(images)
+        return _image_grid(images, img_resolver)
     raise Exception("Пустой список изображений")
 
+def _get_images_struct(images: list[FileModel]):
+    """Формирует структуру (список списков) из рядов изображений.
 
-def _get_images_layout(images: list[FileModel]) -> str:
+    В каждом ряду тоже может быть несколько изображений. В текущей реализации: одно или два."""
+    images.sort(key=lambda x: x.aspect_ratio)
+    rows = []
+    while images:
+        pair_aspect_ratio = []
+        cur_img = images.pop()
+        row = [cur_img]
+        for pair in images:
+            pair_aspect_ratio.append(FIT_IMAGES_ASPECT_RATIO - cur_img.aspect_ratio - pair.aspect_ratio)
+        only_pozitive_delta = list(filter(lambda x: x >= 0, pair_aspect_ratio))
+        if only_pozitive_delta and images:
+            pair_index = pair_aspect_ratio.index(min(only_pozitive_delta))
+            row.append(images.pop(pair_index))
+        rows.append(row)
+
+    return rows
+
+
+def _get_images_layout(images: list[FileModel], img_resolver: ImgResolver) -> str:
     """Компонует фотографии в таблице.
 
     Если фотографии вертикальные, компонует их по две в ряд. Если горизонтальные, то по одной.
     Возвращает фрагмент форматирования для ячейки таблицы, где размещены все фотографии."""
     imgs_string = ""
-    imgs = images.copy()
-    imgs.sort(key=lambda x: x.aspect_ratio)
-    while imgs:
-        pair_aspect_ratio = []
-        cur_img = imgs.pop()
-        row = [cur_img]
-        for pair in imgs:
-            pair_aspect_ratio.append(FIT_IMAGES_ASPECT_RATIO - cur_img.aspect_ratio - pair.aspect_ratio)
-        only_pozitive_delta = list(filter(lambda x: x >= 0, pair_aspect_ratio))
-        if only_pozitive_delta and imgs:
-            pair_index = pair_aspect_ratio.index(min(only_pozitive_delta))
-            row.append(imgs.pop(pair_index))
-        imgs_string += _image_row_expression(row) + ",\n"
+    img_rows = _get_images_struct(images)
+    for row in img_rows:
+        imgs_string += _image_row_expression(row, img_resolver) + ",\n"
     result = "#stack(dir: ttb, {})".format(imgs_string)
     return result
 
 
-def generate_typst(violations: tuple, created_by: UserModel) -> str:
+def generate_typst(violations: tuple, created_by: UserModel, imgs_mapping: dict) -> str:
     """Генерация typst-кода.."""
     responsible_mans = []
     for i in violations:
@@ -114,7 +129,7 @@ def generate_typst(violations: tuple, created_by: UserModel) -> str:
             ViolationData(
                 number=violation.number,
                 date=violation.created_at.replace(tzinfo=timezone.utc).astimezone(tz=tz).strftime("%d.%m.%Y %H:%M"),
-                photos=_get_images_layout(violation.files),
+                photos=_get_images_layout(violation.files, _image_resolver_factory(imgs_mapping)),
                 description=description,
                 terms=violation.actions_needed,
                 status=violation.status,

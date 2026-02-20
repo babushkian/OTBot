@@ -3,7 +3,7 @@
 import io
 import platform
 import subprocess
-
+import tempfile
 from pathlib import Path
 from collections import defaultdict
 
@@ -16,11 +16,10 @@ from bot.logger_config import log
 from bot.handlers.reports_handlers.reports_utils import remove_default_sheet
 from bot.handlers.reports_handlers.generate_typst import generate_typst
 from bot.config import settings
+from bot.utils.image_utils import create_temp_images
 
-
-def write_typst_file(created_by: UserModel, violations: tuple, typ_file: Path) -> None:
-    typst_document = generate_typst(violations, created_by=created_by)
-
+def write_typst_file(created_by: UserModel, violations: tuple, typ_file: Path, imgs_mapping: dict[str, str]) -> None:
+    typst_document = generate_typst(violations, created_by=created_by, imgs_mapping=imgs_mapping)
     with typ_file.open("w", encoding="utf-8") as tf:
         tf.write(typst_document)
 
@@ -42,7 +41,12 @@ def create_typst_report(created_by: UserModel, violations: Sequence[ViolationMod
         log.info("создается предписание по пустой выборке")
 
     typ_file = settings.report_typ_file
-    write_typst_file(created_by, violations, typ_file)
+    tmp = tempfile.TemporaryDirectory(dir=settings.typst_dir)
+    temp_img_dir = Path(tmp.name)
+    imgs_mapping = create_temp_images(temp_img_dir, violations)
+
+
+    write_typst_file(created_by, violations, typ_file, imgs_mapping)
     # pdf_file = settings.report_pdf_file
     pdf_file = settings.typst_dir / f"предписание_{file_number}.pdf"
     if pdf_file.exists():
@@ -72,6 +76,8 @@ def create_typst_report(created_by: UserModel, violations: Sequence[ViolationMod
         log.error(e.stderr)
         msg = "Не удалось скомпилировать Typst файл"
         raise RuntimeError(msg)
+    finally:
+        tmp.cleanup()
     typ_file.unlink(missing_ok=True)
     log.success(f"PDF успешно создан: {pdf_file}")
     return pdf_file
