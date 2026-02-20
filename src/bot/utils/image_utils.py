@@ -1,6 +1,5 @@
 """Функции для обработки изображений, добавляемых во время регистрации нарушений."""
 import hashlib
-
 from io import BytesIO
 from pathlib import Path
 from dataclasses import dataclass
@@ -72,8 +71,8 @@ def get_file(path: Path) -> bytes:
         raise e
 
 MAX_SIDE = 640
-def process_image(path: Path)-> Image.Image:
-    with Image.open(path) as im:
+def process_image(image: bytes)-> Image.Image:
+    with Image.open(BytesIO(image)) as im:
         if im.mode not in ("RGB", "L"):
             im = im.convert("RGB")
         # работаем с копией, чтобы не зависеть от закрытого файла
@@ -82,20 +81,44 @@ def process_image(path: Path)-> Image.Image:
         return out
 
 
+
+def image_to_buffer(img: Image.Image) -> BytesIO:
+    buf = BytesIO()
+    img.save(
+        buf,
+        "JPEG",
+        quality=45,
+        optimize=True,
+        progressive=True,
+        subsampling="4:2:0",
+    )
+    buf.seek(0)          # важно, если буфер будут читать
+    return buf
+
+def buffer_to_file(filename: Path, buf: BytesIO) -> None:
+    with filename.open("wb") as f:
+        f.write(buf.getvalue())
+    return
+
+
+def shrink_image(data: bytes) -> BytesIO:
+    processed_img = process_image(data)
+    return image_to_buffer(processed_img)
+
+
 def create_temp_images(path: Path, violations: Iterable[ViolationModel]) -> dict[str, str]:
     processed_images: dict[str, str] = {}
     for violation in violations:
         for img in violation.files:
-            processed_img = process_image(settings.DATA_DIR / img.path)
+            img_data = get_file(settings.DATA_DIR / img.path)
+            buffer = shrink_image(img_data)
             abs_img_path = path / Path(img.path).name
-            processed_img.save(
-                abs_img_path,
-                "JPEG",
-                quality = 45,
-                optimize = True,
-                progressive = True,
-                subsampling = "4:2:0",
-            )
+            buffer_to_file(abs_img_path, buffer)
             rel_path = abs_img_path.relative_to(settings.typst_dir).as_posix()
             processed_images[img.path] = rel_path
     return processed_images
+
+
+
+
+

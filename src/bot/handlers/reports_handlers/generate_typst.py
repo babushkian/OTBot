@@ -31,9 +31,9 @@ def _get_sign_path(user: UserModel) -> Path | None:
         return Path("..") / rel_sign_path
     return None
 
-type ImgResolver = Callable[[FileModel], Path]
+type ImgResolver = Callable[[FileModel], str]
 
-def _image_resolver_factory(img_map: dict[str, Path]) -> ImgResolver:
+def _image_resolver_factory(img_map: dict[str, str]) -> ImgResolver:
 
     def _get_image_path(image: FileModel) -> str:
         """Возвращает путь фотографии из базы, доступной для использования в typst-шаблоне."""

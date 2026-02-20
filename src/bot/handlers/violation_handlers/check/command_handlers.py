@@ -15,7 +15,7 @@ from bot.repositories.violation_repo import ViolationRepository
 from .states import ViolationCheckStates
 from bot.handlers.reports_handlers.create_reports import create_typst_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
-from bot.utils.image_utils import get_file
+from bot.utils.image_utils import get_file, shrink_image
 from bot.keyboards.inline_keyboards.callback_factories import (
     ViolationsFactory,
     ViolationsActionFactory,
@@ -99,7 +99,7 @@ async def handle_detection_activation_yes_no_response(
             image_path = settings.DATA_DIR / Path(violation_data.files[0].path)
 
             jpeg_file = get_file(image_path)
-
+            shrinked = shrink_image(jpeg_file).getvalue()
             caption_jpeg = f"Выявлено нарушение №{data['number']} в месте '{data['area']}'."
             caption_pdf = f"Детали нарушения №{data['number']}"
             log.info("файл, отправляемый в группу: {v.id}({v.number}) место: {v.area.name} описание: {v.description} ",
@@ -111,7 +111,7 @@ async def handle_detection_activation_yes_no_response(
                 await message.bot.send_document(
                     chat_id=settings.TG_GROUP_ID,
                     document=BufferedInputFile(
-                        jpeg_file,
+                        shrinked,
                         filename=f"Нарушение №{data['number']}.jpg"
                     ),
                     caption=caption_jpeg,

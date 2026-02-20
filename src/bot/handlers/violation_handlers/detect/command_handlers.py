@@ -21,6 +21,7 @@ from bot.logger_config import log
 from bot.repositories.area_repo import AreaRepository
 from bot.repositories.user_repo import UserRepository
 from bot.keyboards.common_keyboards import generate_cancel_button, generate_yes_no_keyboard
+from bot.utils.image_utils import shrink_image
 from .states import DetectionStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard, create_multi_select_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import (
@@ -277,7 +278,8 @@ async def handle_ok_button(callback: types.CallbackQuery, state: FSMContext, ses
     area_repo = AreaRepository(session)
     area = await area_repo.get_area_by_id(data["area_id"])
     # Отправляем фото
-    photo_file = BufferedInputFile(data["images"][0], filename="photo.jpg")
+    shrinked = shrink_image(data["images"][0]).getvalue()
+    photo_file = BufferedInputFile(shrinked, filename="photo.jpg")
     user_tg = callback.from_user.id
     caption = f"Вы отправили фото нарушения с описанием: {data['description']}"
     await callback.message.bot.send_photo(chat_id=user_tg, photo=photo_file, caption=caption)
