@@ -45,7 +45,7 @@ def create_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(
         send_active_orders_report,
         # CronTrigger(minute="*/6"),
-        CronTrigger(day_of_week="wed", hour="16"),
+        CronTrigger(day_of_week="wed,fri", hour="16"),
         id = "активные предписания",
     )
     return scheduler
