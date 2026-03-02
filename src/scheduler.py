@@ -31,17 +31,22 @@ def create_scheduler() -> AsyncIOScheduler:
         send_daily_report,
         # CronTrigger(minute="*/4"),
         CronTrigger(day="*", hour="17"),
-
         id="Ежедневный отчет",
-
     )
+
     scheduler.add_job(
         send_monthly_report,
         # CronTrigger(minute="*/7"),
         CronTrigger(day="last", hour="16", minute="2"),
-        id = "Ежемесячный отчет",
-
+        id = "Ежемесячный отчет в конце месяца",
     )
+
+    scheduler.add_job(
+        send_active_orders_report,
+        CronTrigger(day='1-7', weekday='mon', hour=8, minute=0),
+        id = "Отчет по активным предписаниям в начале месяца",
+    )
+
     scheduler.add_job(
         send_active_orders_report,
         # CronTrigger(minute="*/6"),
