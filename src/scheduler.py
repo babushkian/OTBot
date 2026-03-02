@@ -43,7 +43,7 @@ def create_scheduler() -> AsyncIOScheduler:
 
     scheduler.add_job(
         send_active_orders_report,
-        CronTrigger(day='1-7', weekday='mon', hour=8, minute=0),
+        CronTrigger(day='1-7', day_of_week='mon', hour=8, minute=0),
         id = "Отчет по активным предписаниям в начале месяца",
     )
 
