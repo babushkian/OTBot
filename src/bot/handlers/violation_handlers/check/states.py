@@ -9,17 +9,17 @@ class ViolationCheckStates(StatesGroup):
 
     review = State()
     # состояния для легкой версии
-    lstat = State()
+    lstart = State()
     lreview = State()
 
     activate = State()
     reject = State()
 
-class LightViolationCheckStates(StatesGroup):
-    """Состояния нарушений."""
-
-    start = State()
-    review = State()
-
-    activate = State()
-    reject = State()
+# class LightViolationCheckStates(StatesGroup):
+#     """Состояния нарушений."""
+#
+#     start = State()
+#     review = State()
+#
+#     activate = State()
+#     reject = State()

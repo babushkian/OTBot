@@ -7,7 +7,7 @@ from bot.handlers.common_handlers import router as common_handlers_router
 from bot.handlers.approve_handlers import router as approve_handlers_router
 from bot.handlers.reports_handlers import router as reports_handlers_router
 from bot.handlers.violation_handlers import router as violation_handlers_router
-from bot.handlers.violation_handlers import router as violation_handlers_router
+
 
 from bot.middlewares.db_middleware import DbSessionMiddleware
 from bot.middlewares.user_middleware import UserCheckMiddleware

@@ -9,7 +9,7 @@ from bot.logger_config import log
 from bot.enums import UserRole
 from bot.repositories.user_repo import UserModel
 from bot.repositories.violation_repo import ViolationRepository
-from .states import ViolationCheckStates, LightViolationCheckStates
+from .states import ViolationCheckStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ViolationsFactory
 
@@ -70,5 +70,5 @@ async def light_check_violation(
     violations_kb = await create_keyboard(
         items=violations_to_kb, text_key="btn_name", callback_factory=ViolationsFactory
     )
-    await message.answer("--------------Выберите нарушение для проверки:", reply_markup=violations_kb)
-    await state.set_state(LightViolationCheckStates.start)
+    await message.answer("Выберите нарушение для проверки:", reply_markup=violations_kb)
+    await state.set_state(ViolationCheckStates.lstart)

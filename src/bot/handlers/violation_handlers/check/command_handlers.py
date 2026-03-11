@@ -50,6 +50,17 @@ async def handle_violation_review(
     document = FSInputFile(pdf_file)
     user_tg = callback.from_user.id
 
+    violation_description = (
+        f"Предписание № {violation.number} от {violation.created_at.date()}\n"
+        f"место: {violation.area.name}\n"
+        f"ответственный: {violation.area.responsible_text}\n"
+        f"обнаружил : {violation.detector.first_name}\n"
+        f"{violation.description}\n"
+        f"категория: {violation.category}\n"
+        f"требуется: {violation.actions_needed}\n"
+    )
+    await state.update_data(text=violation_description)
+
     await callback.message.bot.send_document(chat_id=user_tg, document=document, caption=caption)
 
     actions_to_kb = ({"action": "activate", "name": "Утвердить"}, {"action": "reject", "name": "Отклонить"})
@@ -63,6 +74,53 @@ async def handle_violation_review(
               vn=violation.number,
               vi=violation.id
               )
+
+
+
+
+@router.callback_query(ViolationsFactory.filter(), ViolationCheckStates.lstart)
+async def light_handle_violation_review(
+    callback: types.CallbackQuery,
+    callback_data: ViolationsFactory,
+    state: FSMContext,
+    session: AsyncSession,
+    group_user: UserModel,
+) -> None:
+    """Обработчик для просмотра нарушения при одобрении."""
+    await state.update_data(id=callback_data.id)
+    violation_repo = ViolationRepository(session)
+    violation = await violation_repo.get_violation_by_id(callback_data.id)
+    if violation is None:
+        log.error("Не существует нарушения с id={id}", id=callback_data.id)
+    await state.update_data(
+        number=violation.number,
+        detector_tg=violation.detector.telegram_id,
+        description=violation.description,
+        area=violation.area.name,
+    )
+
+    actions_to_kb = ({"action": "activate", "name": "Утвердить"}, {"action": "reject", "name": "Отклонить"})
+    action_kb = await create_keyboard(items=actions_to_kb, text_key="name", callback_factory=ViolationsActionFactory)
+
+    violation_description = (
+        f"Предписание № {violation.number} от {violation.created_at.date()}\n"
+        f"место: {violation.area.name}\n"
+        f"ответственный: {violation.area.responsible_text}\n"
+        f"обнаружил : {violation.detector.first_name}\n"
+        f"{violation.description}\n"
+        f"категория:{violation.category}\n"
+        f"требуется:{violation.actions_needed}\n"
+    )
+    await state.update_data(text=violation_description)
+    await callback.message.answer(violation_description, reply_markup=action_kb)
+    await state.set_state(ViolationCheckStates.review)
+
+    log.debug("Пользователь {user} запустил процесс рассмотрения нарушения {vn}({vi}). ",
+              user=group_user.first_name,
+              vn=violation.number,
+              vi=violation.id
+              )
+
 
 
 @router.callback_query(ViolationsActionFactory.filter(F.action == "activate"), ViolationCheckStates.review)
@@ -106,7 +164,7 @@ async def handle_detection_activation_yes_no_response(
                      v=violation_data)
             pdf_file = create_typst_report(violations=(violation_data,), created_by=group_user)
             document = FSInputFile(pdf_file)
-
+            await message.bot.send_message(chat_id=settings.TG_GROUP_ID, text=data["text"])
             try:
                 await message.bot.send_document(
                     chat_id=settings.TG_GROUP_ID,

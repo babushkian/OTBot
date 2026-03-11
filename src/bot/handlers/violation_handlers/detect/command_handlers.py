@@ -328,7 +328,7 @@ async def handle_detection_yes_no_response(
                     f"Описание: '{data['description']}'.\n"
                     f"Зафиксировано {group_user.first_name}.\n"
                     f"Номер нарушения {success.number}.\n"
-                    f"Для проверки используйте команду /check.",
+                    f"Для проверки используйте команду /lcheck.",
                 )
             log.debug("Notification sent to {admins}", admins=settings.SUPER_USERS_TG_ID)
             # log.debug("Notification sent to {admins}", admins=admins_telegrams)
