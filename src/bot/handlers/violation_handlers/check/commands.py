@@ -9,7 +9,7 @@ from bot.logger_config import log
 from bot.enums import UserRole
 from bot.repositories.user_repo import UserModel
 from bot.repositories.violation_repo import ViolationRepository
-from .states import ViolationCheckStates
+from .states import ViolationCheckStates, LightViolationCheckStates
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ViolationsFactory
 
@@ -43,3 +43,32 @@ async def check_violation(
     )
     await message.answer("Выберите нарушение для проверки:", reply_markup=violations_kb)
     await state.set_state(ViolationCheckStates.start)
+
+
+@router.message(Command("lcheck"))
+async def light_check_violation(
+    message: types.Message, access_denied: bool, group_user: UserModel, session: AsyncSession, state: FSMContext
+) -> None:
+    log.debug("хэндлер  check")
+    log.debug(message.text)
+    """Проверка (обновление/удаление) нарушения."""
+    if access_denied and group_user.user_role != UserRole.ADMIN:
+        return
+
+    violation_repo = ViolationRepository(session)
+    violations = await violation_repo.get_not_reviewed_violations()
+
+    if not violations:
+        await message.reply("Нет нарушений для проверки.")
+        return
+
+    violations_to_kb: list = []
+    for violation in violations:
+        btn_info = {"id": violation.id, "btn_name": f"Нарушение №{violation.number}-{violation.area.name}"}
+        violations_to_kb.append(btn_info)
+
+    violations_kb = await create_keyboard(
+        items=violations_to_kb, text_key="btn_name", callback_factory=ViolationsFactory
+    )
+    await message.answer("--------------Выберите нарушение для проверки:", reply_markup=violations_kb)
+    await state.set_state(LightViolationCheckStates.start)
