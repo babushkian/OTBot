@@ -14,7 +14,7 @@ from bot.keyboards.common_keyboards import generate_cancel_button
 from bot.repositories.violation_repo import ViolationRepository
 from bot.handlers.reports_handlers.states import ReportStates
 from bot.handlers.reports_handlers.reports_utils import validate_date_interval
-from bot.handlers.reports_handlers.create_reports import create_typst_report, create_static_report
+from bot.handlers.reports_handlers.create_reports import create_typst_report, create_static_report, save_static_report
 from bot.keyboards.inline_keyboards.create_keyboard import create_keyboard
 from bot.keyboards.inline_keyboards.callback_factories import ReportTypeFactory, ReportPeriodFactory
 
@@ -97,6 +97,7 @@ async def handle_report_type_select(
         case "stat":
             violations = await violation_repo.get_all_violations()
             report = create_static_report(violations=violations)
+            save_static_report(report)
             document = BufferedInputFile(report, filename="static_report.xlsx")
             caption = "Итоговый расчёт за весь период."
             user_tg = callback.from_user.id

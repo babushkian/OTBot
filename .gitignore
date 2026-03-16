@@ -22,4 +22,5 @@ bot/keyboards/category_buttons.json
 /data/logs
 /data/json/category_buttons.json
 /data/typst/*.pdf
+/data/typst/*.xlsx
 

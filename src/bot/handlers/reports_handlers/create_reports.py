@@ -1,6 +1,7 @@
 """Создание отчётов нарушений."""
 
 import io
+from datetime import date
 import platform
 import subprocess
 import tempfile
@@ -177,5 +178,14 @@ def create_static_report(violations: tuple) -> bytes:
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-
     return output.getvalue()
+
+
+def save_static_report(body: bytes) -> Path:
+    filename = f"статистика за {date.today().strftime("%d.%m.%Y")}.xlsx"
+    fullpath = settings.typst_dir / filename
+    with fullpath.open(mode="wb") as xlsx:
+        xlsx.write(body)
+    log.info(f"Файл статистики {filename} записан.")
+    return fullpath
+
