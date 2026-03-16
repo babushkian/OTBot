@@ -9,15 +9,15 @@ services:
     command: "uv run ./src/main.py"
     restart: always
 
-  scheduler:
-    image: otbot
-    container_name: bot-sched
-    env_file:
-      - ./.env
-    volumes:
-      - botdata:/app/data
-    command: "uv run ./src/scheduler.py"
-    restart: always
+#  scheduler:
+#    image: otbot
+#    container_name: bot-sched
+#    env_file:
+#      - ./.env
+#    volumes:
+#      - botdata:/app/data
+#    command: "uv run ./src/scheduler.py"
+#    restart: always
 
 volumes:
   botdata:
